@@ -1,0 +1,511 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>MIDNIGHT AT MIRAGE MANOR</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      user-select: none;
+    }
+    body {
+      background: #0a0a14;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      font-family: 'Courier New', monospace;
+      margin: 0;
+      padding: 10px;
+    }
+    .game-wrapper {
+      background: #1c1a2a;
+      border-radius: 36px;
+      padding: 20px 20px 25px;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.8), inset 0 0 0 2px #6a5f7a;
+      max-width: 700px;
+      width: 100%;
+    }
+    .screen {
+      background: #0d0b16;
+      border-radius: 24px;
+      padding: 12px;
+      border: 4px solid #2f2840;
+      box-shadow: inset 0 0 30px #00000099;
+    }
+    #gameCanvas {
+      display: block;
+      width: 100%;
+      aspect-ratio: 4/3;
+      background: #0a0812;
+      border-radius: 16px;
+      image-rendering: pixelated;
+      cursor: pointer;
+      touch-action: none;
+    }
+    .panel {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 16px;
+      gap: 8px;
+    }
+    .power-bar {
+      background: #1f1b2b;
+      border-radius: 40px;
+      height: 18px;
+      flex: 2 1 140px;
+      border: 1px solid #53486b;
+      overflow: hidden;
+      box-shadow: inset 0 2px 6px #00000066;
+    }
+    .power-fill {
+      height: 100%;
+      width: 100%;
+      background: linear-gradient(90deg, #b8f0b0, #7fd46a);
+      border-radius: 40px;
+      transition: width 0.15s ease;
+    }
+    .info-text {
+      color: #b9adcf;
+      font-weight: 700;
+      font-size: 0.9rem;
+      letter-spacing: 1px;
+      background: #1e192b;
+      padding: 6px 14px;
+      border-radius: 30px;
+      border: 1px solid #5b4d72;
+      white-space: nowrap;
+    }
+    .info-text span {
+      color: #ebd8ff;
+    }
+    .btn-group {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      justify-content: center;
+      margin-top: 12px;
+    }
+    .ctrl-btn {
+      background: #221f32;
+      border: 2px solid #5c4b72;
+      color: #ddd0f0;
+      font-weight: bold;
+      font-size: 0.8rem;
+      padding: 8px 14px;
+      border-radius: 60px;
+      font-family: inherit;
+      letter-spacing: 0.5px;
+      box-shadow: 0 4px 0 #0b0914;
+      transition: 0.06s linear;
+      touch-action: manipulation;
+      cursor: pointer;
+      flex: 1 0 auto;
+      min-width: 70px;
+    }
+    .ctrl-btn:active {
+      transform: translateY(4px);
+      box-shadow: 0 0px 0 #0b0914;
+    }
+    .ctrl-btn.active {
+      background: #3a2e4e;
+      border-color: #a387c0;
+      color: white;
+    }
+    .door-indicator {
+      display: flex;
+      gap: 16px;
+      color: #a894c0;
+      font-size: 0.8rem;
+      font-weight: bold;
+      align-items: center;
+      margin: 6px 4px;
+    }
+    .door-indicator span {
+      display: inline-block;
+      padding: 4px 12px;
+      border-radius: 30px;
+      background: #191625;
+      border: 1px solid #4d3e60;
+    }
+    .door-indicator .closed {
+      background: #2d3a2d;
+      border-color: #6d9e6d;
+      color: #bbffbb;
+    }
+    .door-indicator .open {
+      background: #3d2e2e;
+      border-color: #b06a6a;
+      color: #ffbaba;
+    }
+    @media (max-width: 500px) {
+      .game-wrapper { padding: 12px; }
+      .ctrl-btn { font-size: 0.65rem; padding: 6px 10px; min-width: 60px; }
+      .info-text { font-size: 0.7rem; padding: 4px 10px; }
+    }
+  </style>
+</head>
+<body>
+<div class="game-wrapper">
+  <div class="screen">
+    <canvas id="gameCanvas" width="640" height="480"></canvas>
+  </div>
+  <div class="panel">
+    <div class="power-bar"><div class="power-fill" id="powerFill" style="width:100%"></div></div>
+    <div class="info-text" id="timeDisplay">⏳ 12:00 AM</div>
+    <div class="info-text" id="nightDisplay">🌙 NIGHT 1</div>
+  </div>
+  <div style="display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; margin-top: 8px;">
+    <div class="door-indicator"><span id="leftDoorStatus" class="open">🚪 LEFT: OPEN</span></div>
+    <div class="door-indicator"><span id="rightDoorStatus" class="open">🚪 RIGHT: OPEN</span></div>
+  </div>
+  <div class="btn-group">
+    <button class="ctrl-btn" id="camBtn">📹 CAM</button>
+    <button class="ctrl-btn" id="leftLightBtn">💡 LEFT</button>
+    <button class="ctrl-btn" id="rightLightBtn">💡 RIGHT</button>
+    <button class="ctrl-btn" id="leftDoorBtn">🚪 LEFT</button>
+    <button class="ctrl-btn" id="rightDoorBtn">🚪 RIGHT</button>
+  </div>
+  <div style="margin-top: 10px; display: flex; justify-content: center;">
+    <button class="ctrl-btn" id="resetBtn" style="background: #2f1f2a; border-color: #9f4a6a;">⟲ RESTART NIGHT</button>
+  </div>
+</div>
+<script>
+  (function() {
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+    // --- DOM refs ---
+    const powerFill = document.getElementById('powerFill');
+    const timeDisplay = document.getElementById('timeDisplay');
+    const nightDisplay = document.getElementById('nightDisplay');
+    const leftDoorStatus = document.getElementById('leftDoorStatus');
+    const rightDoorStatus = document.getElementById('rightDoorStatus');
+
+    // --- GAME STATE ---
+    let power = 100;
+    let time = 0; // 0..360 seconds (6 minutes)
+    let night = 1;
+    let gameOver = false;
+    let win = false;
+    let powerOut = false;
+    let cameraUp = false;
+    let leftDoor = false;   // false=open, true=closed
+    let rightDoor = false;
+    let leftLight = false;
+    let rightLight = false;
+
+    // Automatons
+    const enemies = {
+      maestro: { pos: 0, speed: 0.15, active: true, atDoor: false, name: 'Maestro' },
+      glimmer: { pos: 0, speed: 0.25, active: true, atDoor: false, name: 'Glimmer' },
+      belladonna: { pos: 0, speed: 0.18, active: true, atDoor: false, name: 'Belladonna' },
+      gargoyle: { pos: 0, speed: 0.35, active: true, atDoor: false, name: 'Gargoyle' }
+    };
+    // pos: 0=stage/start, 1=hallway, 2=door, 3=inside (kill)
+    // For Gargoyle special: if pos>0 and right door open => rush.
+
+    let cameraStatic = 0;
+    let frameCount = 0;
+
+    // --- helpers ---
+    function resetNight() {
+      power = 100;
+      time = 0;
+      gameOver = false;
+      win = false;
+      powerOut = false;
+      cameraUp = false;
+      leftDoor = false;
+      rightDoor = false;
+      leftLight = false;
+      rightLight = false;
+      enemies.maestro.pos = 0;
+      enemies.glimmer.pos = 0;
+      enemies.belladonna.pos = 0;
+      enemies.gargoyle.pos = 0;
+      enemies.maestro.atDoor = false;
+      enemies.glimmer.atDoor = false;
+      enemies.belladonna.atDoor = false;
+      enemies.gargoyle.atDoor = false;
+      // set AI based on night
+      let speedMul = 0.6 + (night-1) * 0.22;
+      if (night > 5) speedMul = 1.8;
+      enemies.maestro.speed = 0.12 * speedMul;
+      enemies.glimmer.speed = 0.22 * speedMul;
+      enemies.belladonna.speed = 0.15 * speedMul;
+      enemies.gargoyle.speed = 0.30 * speedMul;
+      // custom night (night 6) handled via reset
+      updateUI();
+    }
+
+    function updateUI() {
+      powerFill.style.width = Math.max(0, power) + '%';
+      let hrs = Math.floor(time / 60) + 12;
+      let mins = Math.floor(time % 60);
+      let ampm = (hrs >= 12) ? 'AM' : 'AM';
+      if (hrs > 12) hrs -= 12;
+      if (hrs === 0) hrs = 12;
+      let timeStr = `${hrs}:${mins.toString().padStart(2,'0')} ${ampm}`;
+      timeDisplay.innerText = `⏳ ${timeStr}`;
+      nightDisplay.innerText = `🌙 NIGHT ${night}`;
+      leftDoorStatus.innerText = leftDoor ? '🚪 LEFT: CLOSED' : '🚪 LEFT: OPEN';
+      leftDoorStatus.className = leftDoor ? 'closed' : 'open';
+      rightDoorStatus.innerText = rightDoor ? '🚪 RIGHT: CLOSED' : '🚪 RIGHT: OPEN';
+      rightDoorStatus.className = rightDoor ? 'closed' : 'open';
+    }
+
+    // --- game logic tick ---
+    function gameTick() {
+      if (gameOver || win) return;
+      // power drain
+      let drain = 0.035; // base
+      if (cameraUp) drain += 0.07;
+      if (leftDoor) drain += 0.10;
+      if (rightDoor) drain += 0.10;
+      if (leftLight) drain += 0.04;
+      if (rightLight) drain += 0.04;
+      power = Math.max(0, power - drain * 1.2);
+      if (power <= 0) {
+        power = 0;
+        powerOut = true;
+        gameOver = true;
+        updateUI();
+        return;
+      }
+
+      // time
+      time += 0.3; // 0.3 sec per tick ~ 6 min real time
+      if (time >= 360) {
+        win = true;
+        gameOver = true;
+        updateUI();
+        return;
+      }
+
+      // move enemies
+      moveEnemies();
+
+      // check door attacks
+      checkDoorAttacks();
+
+      updateUI();
+    }
+
+    function moveEnemies() {
+      // Maestro: moves if camera up > 3 seconds cumulative (simulate with frameCount)
+      if (cameraUp && frameCount % 8 === 0) {
+        if (enemies.maestro.pos === 0 && Math.random() < 0.08) enemies.maestro.pos = 1;
+      }
+      // Glimmer: aggressive
+      if (enemies.glimmer.pos === 0 && Math.random() < 0.015) enemies.glimmer.pos = 1;
+      if (enemies.belladonna.pos === 0 && Math.random() < 0.01) enemies.belladonna.pos = 1;
+      // Gargoyle: if camera up, may leave arcade
+      if (enemies.gargoyle.pos === 0 && cameraUp && Math.random() < 0.02) enemies.gargoyle.pos = 1;
+
+      // move from hallway to door (pos 1->2)
+      for (let e of Object.values(enemies)) {
+        if (e.pos === 1) {
+          if (Math.random() < 0.03 * e.speed * 2) {
+            e.pos = 2;
+            e.atDoor = true;
+          }
+        }
+        if (e.pos === 2 && !e.atDoor) e.atDoor = true;
+      }
+
+      // Gargoyle special: if at door and right door open => kill
+      if (enemies.gargoyle.pos === 2 && !rightDoor) {
+        gameOver = true;
+        return;
+      }
+
+      // if any enemy at door and corresponding door open -> kill (except gargoyle handled)
+      if (enemies.maestro.pos === 2 && !leftDoor) { gameOver = true; return; }
+      if (enemies.glimmer.pos === 2 && !leftDoor) { gameOver = true; return; }
+      if (enemies.belladonna.pos === 2 && !rightDoor) { gameOver = true; return; }
+
+      // reset if door closed and at door -> push back
+      if (enemies.maestro.pos === 2 && leftDoor) { enemies.maestro.pos = 1; enemies.maestro.atDoor = false; }
+      if (enemies.glimmer.pos === 2 && leftDoor) { enemies.glimmer.pos = 1; enemies.glimmer.atDoor = false; }
+      if (enemies.belladonna.pos === 2 && rightDoor) { enemies.belladonna.pos = 1; enemies.belladonna.atDoor = false; }
+      if (enemies.gargoyle.pos === 2 && rightDoor) { enemies.gargoyle.pos = 1; enemies.gargoyle.atDoor = false; }
+
+      // if at door and light on -> show in render
+    }
+
+    function checkDoorAttacks() {
+      // attack if at door and door open
+      if (enemies.maestro.pos === 2 && !leftDoor) { gameOver = true; }
+      if (enemies.glimmer.pos === 2 && !leftDoor) { gameOver = true; }
+      if (enemies.belladonna.pos === 2 && !rightDoor) { gameOver = true; }
+      if (enemies.gargoyle.pos === 2 && !rightDoor) { gameOver = true; }
+    }
+
+    // --- RENDER ---
+    function draw() {
+      ctx.clearRect(0, 0, 640, 480);
+      // background: office
+      ctx.fillStyle = '#14101f';
+      ctx.fillRect(0, 0, 640, 480);
+      // desk
+      ctx.fillStyle = '#2b2238';
+      ctx.fillRect(0, 360, 640, 120);
+      ctx.fillStyle = '#3a2f4a';
+      ctx.fillRect(20, 340, 160, 40);
+      ctx.fillStyle = '#4d3f5e';
+      ctx.fillRect(460, 340, 160, 40);
+      // monitor
+      ctx.fillStyle = '#1c1a2a';
+      ctx.fillRect(200, 80, 240, 180);
+      ctx.fillStyle = '#0d0b16';
+      ctx.fillRect(210, 90, 220, 160);
+      if (cameraUp) {
+        ctx.fillStyle = '#3f3555';
+        ctx.font = 'bold 18px monospace';
+        ctx.fillStyle = '#b7a8d4';
+        ctx.fillText('📹 CAMERA FEED', 230, 130);
+        ctx.fillStyle = '#9d8bbd';
+        ctx.fillText('MAESTRO: '+(enemies.maestro.pos===0?'STAGE':enemies.maestro.pos===1?'HALL':'DOOR'), 220, 170);
+        ctx.fillText('GLIMMER: '+(enemies.glimmer.pos===0?'STAGE':enemies.glimmer.pos===1?'HALL':'DOOR'), 220, 200);
+        ctx.fillText('BELLADONNA: '+(enemies.belladonna.pos===0?'STAGE':enemies.belladonna.pos===1?'HALL':'DOOR'), 220, 230);
+        ctx.fillText('GARGOYLE: '+(enemies.gargoyle.pos===0?'ARCADE':enemies.gargoyle.pos===1?'HALL':'DOOR'), 220, 260);
+      } else {
+        ctx.fillStyle = '#42375a';
+        ctx.font = '18px monospace';
+        ctx.fillText('📺 OFFICE', 250, 150);
+        ctx.fillStyle = '#7a6a92';
+        ctx.font = '14px monospace';
+        ctx.fillText('(cam off)', 270, 190);
+      }
+
+      // left hallway indicator
+      ctx.fillStyle = leftLight ? '#f5e56b' : '#2b2238';
+      ctx.fillRect(20, 80, 60, 30);
+      ctx.fillStyle = '#000';
+      ctx.font = '12px monospace';
+      ctx.fillStyle = leftLight ? '#000' : '#7a6a92';
+      ctx.fillText('LEFT', 30, 100);
+      // right
+      ctx.fillStyle = rightLight ? '#f5e56b' : '#2b2238';
+      ctx.fillRect(560, 80, 60, 30);
+      ctx.fillStyle = rightLight ? '#000' : '#7a6a92';
+      ctx.fillText('RIGHT', 564, 100);
+
+      // door visuals
+      ctx.fillStyle = leftDoor ? '#3f6a3f' : '#4d3f5e';
+      ctx.fillRect(80, 140, 30, 200);
+      ctx.fillStyle = rightDoor ? '#3f6a3f' : '#4d3f5e';
+      ctx.fillRect(530, 140, 30, 200);
+
+      // enemy at door indicators
+      if (enemies.maestro.pos === 2 && leftLight) {
+        ctx.fillStyle = '#ffaa88';
+        ctx.font = 'bold 20px monospace';
+        ctx.fillText('👤 MAESTRO', 10, 300);
+      }
+      if (enemies.glimmer.pos === 2 && leftLight) {
+        ctx.fillStyle = '#cc88ff';
+        ctx.fillText('✨ GLIMMER', 10, 330);
+      }
+      if (enemies.belladonna.pos === 2 && rightLight) {
+        ctx.fillStyle = '#ff88aa';
+        ctx.fillText('🎤 BELLADONNA', 500, 300);
+      }
+      if (enemies.gargoyle.pos === 2 && rightLight) {
+        ctx.fillStyle = '#b8a88a';
+        ctx.fillText('🗿 GARGOYLE', 500, 330);
+      }
+
+      // power out / game over
+      if (powerOut) {
+        ctx.fillStyle = '#000000aa';
+        ctx.fillRect(0, 0, 640, 480);
+        ctx.fillStyle = '#a02040';
+        ctx.font = '48px monospace';
+        ctx.fillText('⚡ POWER OUT', 140, 220);
+        ctx.fillStyle = '#aa8877';
+        ctx.font = '20px monospace';
+        ctx.fillText('The Maestro approaches...', 170, 280);
+      } else if (gameOver && !win) {
+        ctx.fillStyle = '#440000aa';
+        ctx.fillRect(0, 0, 640, 480);
+        ctx.fillStyle = '#ff6666';
+        ctx.font = '42px monospace';
+        ctx.fillText('☠ GAME OVER', 160, 240);
+      } else if (win) {
+        ctx.fillStyle = '#1a3a1aaa';
+        ctx.fillRect(0, 0, 640, 480);
+        ctx.fillStyle = '#b0f0b0';
+        ctx.font = '38px monospace';
+        ctx.fillText('✨ SURVIVED', 180, 220);
+        ctx.fillStyle = '#d0e0d0';
+        ctx.font = '20px monospace';
+        ctx.fillText('dawn breaks at Mirage Manor', 170, 280);
+      }
+
+      // HUD
+      ctx.fillStyle = '#c8b8e0';
+      ctx.font = '12px monospace';
+      ctx.fillText(`PWR ${Math.floor(power)}%`, 540, 450);
+    }
+
+    // --- LOOP ---
+    function loop() {
+      if (!gameOver) {
+        frameCount++;
+        if (frameCount % 3 === 0) gameTick();
+      }
+      draw();
+      requestAnimationFrame(loop);
+    }
+
+    // --- controls ---
+    document.getElementById('camBtn').addEventListener('click', ()=> {
+      if (gameOver || powerOut) return;
+      cameraUp = !cameraUp;
+    });
+    document.getElementById('leftLightBtn').addEventListener('click', ()=> {
+      if (gameOver || powerOut) return;
+      leftLight = !leftLight;
+    });
+    document.getElementById('rightLightBtn').addEventListener('click', ()=> {
+      if (gameOver || powerOut) return;
+      rightLight = !rightLight;
+    });
+    document.getElementById('leftDoorBtn').addEventListener('click', ()=> {
+      if (gameOver || powerOut) return;
+      leftDoor = !leftDoor;
+      updateUI();
+    });
+    document.getElementById('rightDoorBtn').addEventListener('click', ()=> {
+      if (gameOver || powerOut) return;
+      rightDoor = !rightDoor;
+      updateUI();
+    });
+    document.getElementById('resetBtn').addEventListener('click', ()=> {
+      resetNight();
+      gameOver = false;
+      win = false;
+      powerOut = false;
+      updateUI();
+    });
+
+    // keyboard shortcuts
+    document.addEventListener('keydown', (e) => {
+      if (e.key === ' ' || e.key === 'Space') { e.preventDefault(); document.getElementById('camBtn').click(); }
+      if (e.key === 'q' || e.key === 'Q') { document.getElementById('leftLightBtn').click(); }
+      if (e.key === 'e' || e.key === 'E') { document.getElementById('rightLightBtn').click(); }
+      if (e.key === 'a' || e.key === 'A') { document.getElementById('leftDoorBtn').click(); }
+      if (e.key === 'd' || e.key === 'D') { document.getElementById('rightDoorBtn').click(); }
+    });
+
+    // start
+    resetNight();
+    loop();
+  })();
+</script>
+</body>
+</html>

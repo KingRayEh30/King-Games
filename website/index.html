@@ -1,0 +1,562 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>King Games</title>
+    <style>
+        /* --- RESET & BODY --- */
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #0f0f1a;
+            color: #fff;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        /* --- HEADER --- */
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 20px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 16px;
+            margin-bottom: 30px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        h1 {
+            font-size: 2rem;
+            background: linear-gradient(135deg, #f093fb, #f5576c);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .admin-toggle {
+            background: #2a2a3e;
+            border: none;
+            color: #aaa;
+            padding: 8px 20px;
+            border-radius: 30px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: 0.3s;
+        }
+        .admin-toggle:hover {
+            background: #f5576c;
+            color: #fff;
+        }
+
+        /* --- ADMIN PANEL (hidden by default) --- */
+        #adminPanel {
+            display: none;
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            padding: 30px;
+            margin-bottom: 30px;
+            transition: 0.3s;
+        }
+        #adminPanel.open {
+            display: block;
+        }
+        .upload-area {
+            border: 3px dashed #555;
+            border-radius: 16px;
+            padding: 40px;
+            text-align: center;
+            cursor: pointer;
+            transition: 0.3s;
+            color: #aaa;
+        }
+        .upload-area:hover {
+            border-color: #f5576c;
+            background: rgba(245, 87, 108, 0.1);
+        }
+        .upload-area.dragover {
+            border-color: #f093fb;
+            background: rgba(240, 147, 251, 0.15);
+        }
+        #fileInput {
+            display: none;
+        }
+        .game-list-admin {
+            margin-top: 20px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        .game-tag {
+            background: #2a2a3e;
+            padding: 6px 14px;
+            border-radius: 30px;
+            font-size: 0.9rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .game-tag button {
+            background: none;
+            border: none;
+            color: #f5576c;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        /* --- GAME GRID (The Lobby) --- */
+        #gameGrid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 24px;
+        }
+        .game-card {
+            background: #1a1a2e;
+            border-radius: 16px;
+            padding: 16px;
+            text-align: center;
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            transition: 0.3s ease;
+            cursor: pointer;
+        }
+        .game-card:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 12px 30px rgba(245, 87, 108, 0.2);
+            border-color: #f5576c;
+        }
+        .game-card .icon {
+            font-size: 3rem;
+            margin-bottom: 8px;
+        }
+        .game-card .title {
+            font-weight: bold;
+            font-size: 1.1rem;
+        }
+        .game-card .sub {
+            font-size: 0.8rem;
+            color: #888;
+        }
+
+        /* --- GAME PLAYER (Fullscreen overlay) --- */
+        #gamePlayer {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: #000;
+            z-index: 999;
+            flex-direction: column;
+        }
+        #gamePlayer.open {
+            display: flex;
+        }
+        #gamePlayer iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+            background: #fff;
+        }
+        .close-btn {
+            position: absolute;
+            top: 20px;
+            right: 30px;
+            background: #f5576c;
+            border: none;
+            color: #fff;
+            font-size: 2rem;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            cursor: pointer;
+            z-index: 1000;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+            transition: 0.2s;
+        }
+        .close-btn:hover {
+            transform: scale(1.1);
+        }
+
+        /* --- EMPTY STATE --- */
+        .empty {
+            grid-column: 1 / -1;
+            text-align: center;
+            color: #555;
+            padding: 60px 20px;
+            font-size: 1.2rem;
+        }
+        .empty span {
+            font-size: 3rem;
+            display: block;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- HEADER -->
+    <header>
+        <h1>👑 King Games</h1>
+        <button class="admin-toggle" id="adminToggle">🔧 Admin Panel</button>
+    </header>
+
+    <!-- ADMIN PANEL -->
+    <div id="adminPanel">
+        <h2>📤 Upload a New Game</h2>
+        <p style="color: #888; margin-bottom: 16px;">Upload a <strong>.zip</strong> file containing your game's HTML, CSS, and JS.</p>
+        <div class="upload-area" id="uploadArea">
+            <p>📁 Drag & Drop your .zip file here</p>
+            <p style="font-size: 0.8rem; margin-top: 8px;">or click to browse</p>
+            <input type="file" id="fileInput" accept=".zip">
+        </div>
+        <div class="game-list-admin" id="gameListAdmin">
+            <!-- Dynamic list of uploaded games will appear here -->
+        </div>
+    </div>
+
+    <!-- GAME GRID (LOBBY) -->
+    <div id="gameGrid">
+        <!-- Cards are injected here by JavaScript -->
+        <div class="empty">
+            <span>🕹️</span>
+            No games uploaded yet.<br>
+            Open the Admin Panel to add your first game!
+        </div>
+    </div>
+
+    <!-- GAME PLAYER (overlay) -->
+    <div id="gamePlayer">
+        <button class="close-btn" id="closePlayer">✕</button>
+        <iframe id="gameFrame" src="about:blank"></iframe>
+    </div>
+
+    <script>
+        // ------------------------------------------------------------
+        // 1. DATA LAYER — uses localStorage to persist your games
+        // ------------------------------------------------------------
+        const STORAGE_KEY = 'myGameArcadeGames';
+
+        function getGames() {
+            try {
+                return JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
+            } catch {
+                return [];
+            }
+        }
+
+        function saveGames(games) {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(games));
+        }
+
+        // ------------------------------------------------------------
+        // 2. RENDER THE LOBBY (game grid)
+        // ------------------------------------------------------------
+        function renderLobby() {
+            const grid = document.getElementById('gameGrid');
+            const games = getGames();
+
+            if (games.length === 0) {
+                grid.innerHTML = `
+                    <div class="empty">
+                        <span>🕹️</span>
+                        No games uploaded yet.<br>
+                        Open the Admin Panel to add your first game!
+                    </div>
+                `;
+                return;
+            }
+
+            grid.innerHTML = games.map((game, index) => `
+                <div class="game-card" data-index="${index}">
+                    <div class="icon">${game.icon || '🎮'}</div>
+                    <div class="title">${game.name}</div>
+                    <div class="sub">${game.date || 'Just now'}</div>
+                </div>
+            `).join('');
+
+            // Add click listeners to each card
+            document.querySelectorAll('.game-card').forEach(card => {
+                card.addEventListener('click', () => {
+                    const index = parseInt(card.dataset.index);
+                    const games = getGames();
+                    const game = games[index];
+                    if (game && game.data) {
+                        openGame(game);
+                    }
+                });
+            });
+        }
+
+        // ------------------------------------------------------------
+        // 3. RENDER ADMIN GAME LIST (tags)
+        // ------------------------------------------------------------
+        function renderAdminList() {
+            const container = document.getElementById('gameListAdmin');
+            const games = getGames();
+
+            if (games.length === 0) {
+                container.innerHTML = '<p style="color: #555; margin-top: 10px;">No games uploaded yet.</p>';
+                return;
+            }
+
+            container.innerHTML = games.map((game, index) => `
+                <div class="game-tag">
+                    <span>${game.icon || '🎮'} ${game.name}</span>
+                    <button data-index="${index}" class="delete-game">✕</button>
+                </div>
+            `).join('');
+
+            // Delete button listeners
+            document.querySelectorAll('.delete-game').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const index = parseInt(btn.dataset.index);
+                    let games = getGames();
+                    games.splice(index, 1);
+                    saveGames(games);
+                    renderLobby();
+                    renderAdminList();
+                });
+            });
+        }
+
+        // ------------------------------------------------------------
+        // 4. OPEN / CLOSE GAME PLAYER
+        // ------------------------------------------------------------
+        function openGame(game) {
+            const player = document.getElementById('gamePlayer');
+            const frame = document.getElementById('gameFrame');
+            
+            // The game data is stored as a base64 string of the zip's contents.
+            // For simplicity, we assume the zip contains an 'index.html' at the root.
+            // We'll use a Blob URL to serve the HTML.
+            try {
+                // If we stored the game as a zip, we need to unzip it.
+                // For a production app, you'd use a library like JSZip.
+                // BUT to keep this demo 100% self-contained and simple,
+                // we'll store the game as a plain HTML string.
+                // When uploading, we'll read the zip and extract index.html.
+                // In this demo, we store the HTML directly.
+                const htmlContent = game.data; // This is the HTML string
+                const blob = new Blob([htmlContent], { type: 'text/html' });
+                const url = URL.createObjectURL(blob);
+                frame.src = url;
+                player.classList.add('open');
+            } catch (err) {
+                alert('Error loading game. Please make sure it\'s a valid HTML file.');
+                console.error(err);
+            }
+        }
+
+        document.getElementById('closePlayer').addEventListener('click', () => {
+            const player = document.getElementById('gamePlayer');
+            const frame = document.getElementById('gameFrame');
+            player.classList.remove('open');
+            frame.src = 'about:blank';
+        });
+
+        // Close with ESC key
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                document.getElementById('closePlayer').click();
+            }
+        });
+
+        // ------------------------------------------------------------
+        // 5. UPLOAD SYSTEM — handles .zip files
+        // ------------------------------------------------------------
+        const uploadArea = document.getElementById('uploadArea');
+        const fileInput = document.getElementById('fileInput');
+
+        // --- Click to upload ---
+        uploadArea.addEventListener('click', () => fileInput.click());
+
+        // --- Drag & Drop ---
+        uploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadArea.classList.add('dragover');
+        });
+        uploadArea.addEventListener('dragleave', () => {
+            uploadArea.classList.remove('dragover');
+        });
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadArea.classList.remove('dragover');
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                handleFile(files[0]);
+            }
+        });
+
+        // --- File input change ---
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) {
+                handleFile(e.target.files[0]);
+            }
+            fileInput.value = ''; // reset so you can upload same file again
+        });
+
+        // --- Process the uploaded file ---
+        function handleFile(file) {
+            // Only accept .zip files
+            if (!file.name.endsWith('.zip')) {
+                alert('Please upload a .zip file containing your game.');
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = async function(e) {
+                try {
+                    const arrayBuffer = e.target.result;
+                    // We'll use JSZip to extract the contents.
+                    // Since JSZip is not built-in, we'll load it from a CDN.
+                    // But to keep it all in one file, we'll use a dynamic import.
+                    // Alternatively, we can use a simpler approach: 
+                    // we'll ask the user to upload the HTML file directly.
+                    // For a better UX, we'll use a lightweight zip library.
+                    
+                    // ====================================================
+                    // SIMPLE APPROACH (no zip library):
+                    // For this demo, let's make it super easy:
+                    // The user uploads a .html file directly (not .zip)
+                    // This is simpler and works 100% without external libs.
+                    // ====================================================
+                    
+                    // Let's change the logic: accept .html files directly.
+                    // We'll update the UI text accordingly.
+                    alert('For this demo, please upload the .html file directly (not a .zip).\n\nWe\'ll update the upload logic to handle .html files.');
+                    
+                    // But we promised a .zip uploader! Let's do it properly:
+                    // We'll load JSZip from CDN dynamically.
+                    loadJSZipAndExtract(arrayBuffer, file.name);
+                    
+                } catch (err) {
+                    alert('Error reading file: ' + err.message);
+                }
+            };
+            reader.readAsArrayBuffer(file);
+        }
+
+        // --- Dynamically load JSZip from CDN ---
+        async function loadJSZipAndExtract(arrayBuffer, fileName) {
+            try {
+                // Load JSZip
+                const script = document.createElement('script');
+                script.src = 'https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js';
+                document.head.appendChild(script);
+                
+                await new Promise((resolve, reject) => {
+                    script.onload = resolve;
+                    script.onerror = reject;
+                });
+
+                // Now JSZip is available globally
+                const zip = await JSZip.loadAsync(arrayBuffer);
+                
+                // Find index.html (case insensitive)
+                let htmlFile = null;
+                let htmlFileName = null;
+                for (const [name, fileObj] of Object.entries(zip.files)) {
+                    if (name.toLowerCase() === 'index.html' || name.endsWith('.html')) {
+                        htmlFile = fileObj;
+                        htmlFileName = name;
+                        break;
+                    }
+                }
+
+                if (!htmlFile) {
+                    alert('No index.html found in the zip file. Please make sure your game has an index.html at the root.');
+                    return;
+                }
+
+                // Extract the HTML content as text
+                const htmlContent = await htmlFile.async('text');
+                
+                // Save the game
+                const games = getGames();
+                const gameName = fileName.replace('.zip', '').replace(/[^a-zA-Z0-9 ]/g, '');
+                games.push({
+                    name: gameName || 'Untitled Game',
+                    icon: '🎮',
+                    date: new Date().toLocaleDateString(),
+                    data: htmlContent // store the actual HTML
+                });
+                saveGames(games);
+                
+                // Re-render
+                renderLobby();
+                renderAdminList();
+                
+                // Close admin panel after upload (optional)
+                document.getElementById('adminPanel').classList.remove('open');
+                
+            } catch (err) {
+                alert('Error extracting zip: ' + err.message);
+                console.error(err);
+            }
+        }
+
+        // ------------------------------------------------------------
+        // 6. ADMIN PANEL TOGGLE
+        // ------------------------------------------------------------
+        document.getElementById('adminToggle').addEventListener('click', () => {
+            document.getElementById('adminPanel').classList.toggle('open');
+        });
+
+        // ------------------------------------------------------------
+        // 7. INIT
+        // ------------------------------------------------------------
+        renderLobby();
+        renderAdminList();
+
+        // Override the handleFile to support both .zip and direct .html for convenience
+        // Actually, let's rewrite the handleFile to support .html directly too.
+        // We'll keep the zip logic and add a fallback.
+        const originalHandleFile = handleFile;
+        handleFile = function(file) {
+            if (file.name.endsWith('.html') || file.name.endsWith('.htm')) {
+                // Direct HTML upload
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const htmlContent = e.target.result;
+                    const games = getGames();
+                    const gameName = file.name.replace('.html', '').replace('.htm', '').replace(/[^a-zA-Z0-9 ]/g, '');
+                    games.push({
+                        name: gameName || 'Untitled Game',
+                        icon: '🎮',
+                        date: new Date().toLocaleDateString(),
+                        data: htmlContent
+                    });
+                    saveGames(games);
+                    renderLobby();
+                    renderAdminList();
+                    document.getElementById('adminPanel').classList.remove('open');
+                };
+                reader.readAsText(file);
+                return;
+            }
+            
+            // Otherwise, use the zip method (which now loads JSZip)
+            const reader = new FileReader();
+            reader.onload = async function(e) {
+                try {
+                    await loadJSZipAndExtract(e.target.result, file.name);
+                } catch (err) {
+                    alert('Error: ' + err.message);
+                }
+            };
+            reader.readAsArrayBuffer(file);
+        };
+
+        // Update the upload area text to mention both .zip and .html
+        document.querySelector('.upload-area p').innerHTML = '📁 Drag & Drop your .zip or .html file here';
+
+        console.log('🎮 Arcade loaded! Upload your games via the Admin Panel.');
+    </script>
+</body>
+</html>

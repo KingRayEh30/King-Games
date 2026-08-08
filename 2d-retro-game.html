@@ -1,0 +1,689 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>⚙️ RETRO DODGE · WASD + settings</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      user-select: none;
+    }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: #0b0e1a;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      font-family: 'Courier New', Courier, monospace;
+    }
+    .game-wrapper {
+      background: #1a1f2f;
+      padding: 24px 24px 30px;
+      border-radius: 32px;
+      box-shadow: 0 12px 0 #0f121e, 0 20px 30px rgba(0,0,0,0.7);
+      border: 2px solid #3d4a5f;
+      max-width: 740px;
+    }
+    canvas {
+      display: block;
+      margin: 0 auto;
+      width: 640px;
+      height: 480px;
+      image-rendering: crisp-edges;
+      image-rendering: pixelated;
+      background: #1c2538;
+      border-radius: 16px;
+      box-shadow: inset 0 0 0 2px #2c384f, 0 8px 0 #0c101b;
+      cursor: pointer;
+    }
+    .info-panel {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin: 16px 8px 0 8px;
+      color: #b7d0e5;
+      text-shadow: 0 2px 0 #0a0e16;
+      font-size: 18px;
+      font-weight: bold;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .score-box {
+      background: #0f1422;
+      padding: 4px 16px;
+      border-radius: 40px;
+      border: 2px solid #3a4b64;
+      color: #d7ecff;
+    }
+    .btn {
+      background: #2b3850;
+      border: none;
+      color: #d7ecff;
+      font-family: 'Courier New', monospace;
+      font-weight: bold;
+      font-size: 16px;
+      padding: 4px 14px;
+      border-radius: 40px;
+      border-bottom: 4px solid #141c2b;
+      cursor: pointer;
+      transition: 0.08s linear;
+      box-shadow: 0 3px 0 #0e131f;
+    }
+    .btn:active { transform: translateY(4px); border-bottom-width: 2px; }
+    .btn:hover { background: #33445f; color: white; }
+    .settings-toggle {
+      background: #2a3f5a;
+      border-color: #4a6a8a;
+    }
+    .settings-panel {
+      background: #141d2b;
+      border-radius: 20px;
+      padding: 16px 20px;
+      margin-top: 14px;
+      border: 2px solid #2c3f5a;
+      display: none;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 18px 28px;
+    }
+    .settings-panel.open { display: flex; }
+    .setting-group {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: #b7d0e5;
+      font-size: 16px;
+    }
+    .setting-group label { display: flex; align-items: center; gap: 6px; }
+    .key-badge {
+      background: #0b101c;
+      padding: 2px 12px;
+      border-radius: 30px;
+      border: 2px solid #3d5a7a;
+      font-weight: bold;
+      color: #d7ecff;
+      min-width: 40px;
+      text-align: center;
+      cursor: pointer;
+    }
+    .key-badge.active { border-color: #f5b042; background: #1f2a3f; }
+    .key-badge:hover { background: #1f2a3f; }
+    .music-toggle {
+      background: #1f2a3f;
+      border: 2px solid #4a6a8a;
+      border-radius: 40px;
+      padding: 4px 16px;
+      color: #b7d0e5;
+      font-size: 18px;
+      cursor: pointer;
+    }
+    .music-toggle.on { border-color: #7bcb7b; color: #7bcb7b; }
+    .music-toggle.off { border-color: #8a5a5a; color: #b08080; }
+    @media (max-width: 700px) {
+      canvas { width: 100%; height: auto; aspect-ratio: 640/480; }
+      .game-wrapper { padding: 16px; }
+      .info-panel { justify-content: center; }
+      .settings-panel { flex-direction: column; align-items: center; }
+    }
+  </style>
+</head>
+<body>
+<div class="game-wrapper">
+  <canvas id="gameCanvas" width="640" height="480"></canvas>
+  <div class="info-panel">
+    <div class="score-box">🏆 <span id="scoreDisplay">0000</span></div>
+    <div class="level-indicator" id="levelDisplay">🌱 EASY</div>
+    <button class="btn settings-toggle" id="settingsToggle">⚙️ SETTINGS</button>
+    <button class="btn" id="restartButton">↺ RESTART</button>
+  </div>
+
+  <!-- SETTINGS PANEL -->
+  <div class="settings-panel" id="settingsPanel">
+    <div class="setting-group">
+      <span>⬆️</span>
+      <label>Up <span class="key-badge" data-key="up">W</span></label>
+    </div>
+    <div class="setting-group">
+      <span>⬇️</span>
+      <label>Down <span class="key-badge" data-key="down">S</span></label>
+    </div>
+    <div class="setting-group">
+      <span>⬅️</span>
+      <label>Left <span class="key-badge" data-key="left">A</span></label>
+    </div>
+    <div class="setting-group">
+      <span>➡️</span>
+      <label>Right <span class="key-badge" data-key="right">D</span></label>
+    </div>
+    <div class="setting-group">
+      <span>🎵</span>
+      <label>Music <span class="music-toggle on" id="musicToggle">▶ ON</span></label>
+    </div>
+  </div>
+</div>
+
+<script>
+  (function() {
+    // ----- RETRO DODGE · WASD + KEYBINDS + MUSIC -----
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+    const scoreSpan = document.getElementById('scoreDisplay');
+    const levelSpan = document.getElementById('levelDisplay');
+
+    const W = 640, H = 480;
+
+    // ---- game state ----
+    let state = 'TITLE';        // 'TITLE', 'PLAYING', 'GAMEOVER'
+    let currentLevel = 0;       // 0=easy, 1=medium, 2=hard
+    let player = { x: 300, y: 380, w: 24, h: 24 };
+    let enemies = [];
+    let score = 0;
+    let frame = 0;
+    let spawnCounter = 0;
+
+    // ---- keybinds (default WASD) ----
+    let keybinds = {
+      up: 'w',
+      down: 's',
+      left: 'a',
+      right: 'd'
+    };
+    // ---- active keys (for movement) ----
+    let keys = {
+      up: false,
+      down: false,
+      left: false,
+      right: false
+    };
+
+    // ---- music ----
+    let musicEnabled = true;
+    let audioCtx = null;
+    let musicInterval = null;
+    let musicNoteIndex = 0;
+
+    // ---- level configs ----
+    const LEVELS = [
+      { name: '🌱 EASY',    enemySpeed: 1.3,  maxEnemies: 12, spawnRate: 45, playerSpeed: 5.4, scoreMult: 0.8 },
+      { name: '🌿 MEDIUM',  enemySpeed: 2.0,  maxEnemies: 20, spawnRate: 28, playerSpeed: 5.0, scoreMult: 1.2 },
+      { name: '🔥 HARD',    enemySpeed: 2.9,  maxEnemies: 30, spawnRate: 16, playerSpeed: 4.6, scoreMult: 1.8 }
+    ];
+
+    // ---- helpers ----
+    function clamp(v, min, max) { return Math.min(max, Math.max(min, v)); }
+
+    // ---- reset game ----
+    function resetGame() {
+      player.x = 300;
+      player.y = 380;
+      enemies = [];
+      score = 0;
+      frame = 0;
+      spawnCounter = 0;
+      state = 'PLAYING';
+      updateScoreDisplay();
+      updateLevelDisplay();
+    }
+
+    function goToTitle() {
+      state = 'TITLE';
+      enemies = [];
+      score = 0;
+      updateScoreDisplay();
+      stopMusic();
+    }
+
+    // ---- UI ----
+    function updateScoreDisplay() {
+      let str = String(Math.floor(score));
+      while (str.length < 4) str = '0' + str;
+      scoreSpan.textContent = str;
+    }
+    function updateLevelDisplay() {
+      levelSpan.textContent = LEVELS[currentLevel].name;
+    }
+
+    // ---- spawn enemy ----
+    function spawnEnemy() {
+      const cfg = LEVELS[currentLevel];
+      if (enemies.length >= cfg.maxEnemies) return;
+      const side = Math.floor(Math.random() * 4);
+      let x, y;
+      const pad = 50;
+      if (side === 0) { x = Math.random() * (W - 60) + 30; y = -pad - 20; }
+      else if (side === 1) { x = W + pad + 20; y = Math.random() * (H - 60) + 30; }
+      else if (side === 2) { x = Math.random() * (W - 60) + 30; y = H + pad + 20; }
+      else { x = -pad - 20; y = Math.random() * (H - 60) + 30; }
+      const size = Math.floor(Math.random() * 12) + 14;
+      const speed = cfg.enemySpeed + (Math.random() * 0.8 - 0.4);
+      const colors = ['#f05454','#f5a742','#f7d44a','#7bcb7b','#4fadf0','#b77cf2','#f28bc9','#6fc1b0','#f59b8c','#9cd4f0'];
+      const color = colors[Math.floor(Math.random() * colors.length)];
+      enemies.push({
+        x, y, w: size, h: size, speed: speed, color: color,
+        dx: (W/2 - x) + (Math.random() - 0.5) * 50,
+        dy: (H/2 - y) + (Math.random() - 0.5) * 50,
+      });
+    }
+
+    // ---- update enemies ----
+    function updateEnemies() {
+      const targetX = player.x + player.w/2;
+      const targetY = player.y + player.h/2;
+      for (let e of enemies) {
+        let dx = targetX - (e.x + e.w/2);
+        let dy = targetY - (e.y + e.h/2);
+        const len = Math.hypot(dx, dy);
+        if (len < 0.001) continue;
+        const driftX = (Math.random() - 0.5) * 0.2;
+        const driftY = (Math.random() - 0.5) * 0.2;
+        const stepX = (dx / len) * e.speed + driftX;
+        const stepY = (dy / len) * e.speed + driftY;
+        e.x += stepX;
+        e.y += stepY;
+      }
+      const px = player.x, py = player.y, pw = player.w, ph = player.h;
+      for (let e of enemies) {
+        if (px < e.x + e.w && px + pw > e.x &&
+            py < e.y + e.h && py + ph > e.y) {
+          state = 'GAMEOVER';
+          stopMusic();
+          return;
+        }
+      }
+      enemies = enemies.filter(e => {
+        const margin = 180;
+        return e.x > -margin && e.x < W + margin &&
+               e.y > -margin && e.y < H + margin;
+      });
+    }
+
+    // ---- player movement (uses keybinds) ----
+    function movePlayer() {
+      if (state !== 'PLAYING') return;
+      const SPEED = LEVELS[currentLevel].playerSpeed;
+      let dx = 0, dy = 0;
+      if (keys.up) dy -= SPEED;
+      if (keys.down) dy += SPEED;
+      if (keys.left) dx -= SPEED;
+      if (keys.right) dx += SPEED;
+      if (dx !== 0 && dy !== 0) { dx *= 0.7071; dy *= 0.7071; }
+      player.x = clamp(player.x + dx, 0, W - player.w);
+      player.y = clamp(player.y + dy, 0, H - player.h);
+    }
+
+    function updateScore() {
+      if (state === 'PLAYING') {
+        const cfg = LEVELS[currentLevel];
+        const bonus = Math.min(enemies.length, 10) * 0.04;
+        score += (0.10 + bonus) * cfg.scoreMult;
+        updateScoreDisplay();
+      }
+    }
+
+    function handleSpawning() {
+      if (state !== 'PLAYING') return;
+      const cfg = LEVELS[currentLevel];
+      spawnCounter++;
+      if (spawnCounter >= cfg.spawnRate) {
+        spawnCounter = 0;
+        spawnEnemy();
+        if (enemies.length < 5 && Math.random() < 0.15) spawnEnemy();
+      }
+    }
+
+    // ========== MUSIC SYSTEM (8-bit style) ==========
+    function startMusic() {
+      if (!musicEnabled) return;
+      stopMusic();
+      try {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        if (audioCtx.state === 'suspended') audioCtx.resume();
+        playNote();
+        musicInterval = setInterval(playNote, 320);
+      } catch(e) { /* silent fail */ }
+    }
+
+    function stopMusic() {
+      if (musicInterval) { clearInterval(musicInterval); musicInterval = null; }
+      if (audioCtx) { audioCtx.close().catch(()=>{}); audioCtx = null; }
+      musicNoteIndex = 0;
+    }
+
+    function playNote() {
+      if (!audioCtx || audioCtx.state !== 'running') return;
+      const notes = [523, 587, 659, 784, 880, 988, 1047];
+      const base = notes[musicNoteIndex % notes.length];
+      const freq = base * (0.95 + Math.random() * 0.1);
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = 'square';
+      osc.frequency.value = freq;
+      gain.gain.value = 0.06;
+      gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.12);
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.start();
+      osc.stop(audioCtx.currentTime + 0.12);
+      musicNoteIndex++;
+    }
+
+    // ========== DRAWING ==========
+    let hoveredLevel = -1;
+
+    function drawTitle() {
+      ctx.fillStyle = '#0f1a2b';
+      ctx.fillRect(0, 0, W, H);
+      ctx.strokeStyle = '#253450';
+      ctx.lineWidth = 1;
+      for (let i = 0; i < W; i += 40) { ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i, H); ctx.stroke(); }
+      for (let i = 0; i < H; i += 40) { ctx.beginPath(); ctx.moveTo(0, i); ctx.lineTo(W, i); ctx.stroke(); }
+
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.shadowBlur = 30;
+      ctx.shadowColor = '#4f7fa0';
+      ctx.font = 'bold 64px "Courier New", monospace';
+      ctx.fillStyle = '#b7e4ff';
+      ctx.fillText('RETRO DODGE', W/2, 130);
+      ctx.shadowBlur = 0;
+      ctx.fillStyle = '#7fc5ff';
+      ctx.fillText('RETRO DODGE', W/2-2, 128);
+
+      ctx.font = 'bold 28px "Courier New", monospace';
+      ctx.fillStyle = '#c0daff';
+      ctx.fillText('SELECT LEVEL', W/2, 220);
+
+      const levelNames = ['🌱 EASY', '🌿 MEDIUM', '🔥 HARD'];
+      const colors = ['#7bcb7b', '#f7d44a', '#f05454'];
+      for (let i = 0; i < 3; i++) {
+        const x = 160 + i * 170;
+        const y = 290;
+        const w = 140, h = 60;
+        const isHover = (hoveredLevel === i);
+        ctx.shadowBlur = isHover ? 20 : 0;
+        ctx.shadowColor = colors[i];
+        ctx.fillStyle = isHover ? '#2f4a6a' : '#1a253a';
+        ctx.fillRect(x - w/2, y - h/2, w, h);
+        ctx.strokeStyle = isHover ? '#b7d0e5' : '#4a6080';
+        ctx.lineWidth = 3;
+        ctx.strokeRect(x - w/2, y - h/2, w, h);
+        ctx.shadowBlur = 0;
+        ctx.font = 'bold 26px "Courier New", monospace';
+        ctx.fillStyle = isHover ? '#ffffff' : colors[i];
+        ctx.fillText(levelNames[i], x, y + 4);
+      }
+      ctx.font = '18px "Courier New", monospace';
+      ctx.fillStyle = '#6e83a0';
+      ctx.fillText('click a level to start', W/2, 400);
+      // show controls
+      ctx.font = '14px "Courier New", monospace';
+      ctx.fillStyle = '#4a6080';
+      ctx.fillText('WASD / custom keys · music toggle in settings', W/2, 450);
+    }
+
+    function drawGame() {
+      ctx.fillStyle = '#192236';
+      ctx.fillRect(0, 0, W, H);
+      ctx.strokeStyle = '#2a3850';
+      ctx.lineWidth = 1;
+      for (let i = 0; i < W; i += 32) { ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i, H); ctx.stroke(); }
+      for (let i = 0; i < H; i += 32) { ctx.beginPath(); ctx.moveTo(0, i); ctx.lineTo(W, i); ctx.stroke(); }
+
+      for (let e of enemies) {
+        ctx.shadowColor = e.color;
+        ctx.shadowBlur = 12;
+        ctx.fillStyle = e.color;
+        ctx.fillRect(e.x, e.y, e.w, e.h);
+        ctx.shadowBlur = 0;
+        ctx.fillStyle = '#ffffff40';
+        ctx.fillRect(e.x+2, e.y+2, e.w-4, 3);
+        ctx.fillRect(e.x+2, e.y+2, 3, e.h-4);
+        ctx.strokeStyle = '#0f1422';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(e.x, e.y, e.w, e.h);
+        ctx.strokeStyle = '#ffffff15';
+        ctx.lineWidth = 1;
+        ctx.setLineDash([3, 6]);
+        ctx.strokeRect(e.x-2, e.y-2, e.w+4, e.h+4);
+        ctx.setLineDash([]);
+      }
+      ctx.shadowBlur = 0;
+
+      const p = player;
+      ctx.beginPath();
+      ctx.arc(p.x + p.w/2, p.y + p.h/2, 44, 0, Math.PI*2);
+      ctx.strokeStyle = '#6fc1b060';
+      ctx.lineWidth = 2;
+      ctx.setLineDash([6, 8]);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.fillStyle = '#6fc1b010';
+      ctx.fill();
+
+      ctx.shadowColor = '#8fcbff';
+      ctx.shadowBlur = 20;
+      ctx.fillStyle = '#7fc5ff';
+      ctx.fillRect(p.x, p.y, p.w, p.h);
+      ctx.shadowBlur = 0;
+      ctx.fillStyle = '#b0e0ff';
+      ctx.fillRect(p.x+4, p.y+4, 6, 6);
+      ctx.fillRect(p.x+p.w-10, p.y+4, 6, 6);
+      ctx.fillStyle = '#3d7bb3';
+      ctx.fillRect(p.x+8, p.y+12, 6, 6);
+      ctx.strokeStyle = '#16436b';
+      ctx.lineWidth = 3;
+      ctx.strokeRect(p.x, p.y, p.w, p.h);
+      ctx.fillStyle = '#f5b042';
+      ctx.fillRect(p.x+4, p.y+p.h-5, 5, 5);
+      ctx.fillRect(p.x+p.w-9, p.y+p.h-5, 5, 5);
+      ctx.shadowBlur = 0;
+
+      ctx.font = 'bold 24px "Courier New", monospace';
+      ctx.textAlign = 'right';
+      ctx.textBaseline = 'top';
+      ctx.fillStyle = '#b7d0e5';
+      ctx.shadowBlur = 8;
+      ctx.shadowColor = '#4f7fa0';
+      ctx.fillText('SCORE ' + String(Math.floor(score)).padStart(4, '0'), W-18, 14);
+      ctx.shadowBlur = 0;
+
+      ctx.font = '14px "Courier New", monospace';
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'bottom';
+      ctx.fillStyle = '#6e83a060';
+      ctx.fillText(LEVELS[currentLevel].name + '  |  enemies: ' + enemies.length, 14, H-10);
+
+      if (state === 'GAMEOVER') {
+        ctx.font = 'bold 52px "Courier New", monospace';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.shadowBlur = 20;
+        ctx.shadowColor = '#ff0066';
+        ctx.fillStyle = '#ff2a6d';
+        ctx.fillText('GAME OVER', W/2, 170);
+        ctx.shadowBlur = 0;
+        ctx.fillStyle = '#ffa0c0';
+        ctx.fillText('GAME OVER', W/2-2, 168);
+      }
+    }
+
+    function draw() {
+      if (state === 'TITLE') drawTitle();
+      else drawGame();
+    }
+
+    // ---- game loop ----
+    function gameLoop() {
+      if (state === 'PLAYING') {
+        movePlayer();
+        handleSpawning();
+        updateEnemies();
+        updateScore();
+        frame++;
+      }
+      draw();
+      requestAnimationFrame(gameLoop);
+    }
+
+    // ========== KEYBOARD (uses keybinds) ==========
+    function handleKeyDown(e) {
+      const key = e.key.toLowerCase();
+      // map key to action
+      for (let action of ['up', 'down', 'left', 'right']) {
+        if (key === keybinds[action]) {
+          keys[action] = true;
+          e.preventDefault();
+          // if title and music off, start music on first keypress
+          if (state === 'TITLE') return;
+        }
+      }
+      if (key === 'r' || key === 'R') {
+        if (state === 'GAMEOVER' || state === 'PLAYING') {
+          e.preventDefault();
+          resetGame();
+          if (musicEnabled) startMusic();
+        }
+      }
+    }
+
+    function handleKeyUp(e) {
+      const key = e.key.toLowerCase();
+      for (let action of ['up', 'down', 'left', 'right']) {
+        if (key === keybinds[action]) {
+          keys[action] = false;
+          e.preventDefault();
+        }
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown);
+    window.addEventListener('keyup', handleKeyUp);
+    window.addEventListener('keydown', (e) => {
+      if (e.key.startsWith('Arrow')) e.preventDefault();
+    }, { passive: false });
+
+    // ========== MOUSE / TITLE ==========
+    canvas.addEventListener('click', (e) => {
+      if (state !== 'TITLE') return;
+      const rect = canvas.getBoundingClientRect();
+      const scaleX = canvas.width / rect.width;
+      const scaleY = canvas.height / rect.height;
+      const mx = (e.clientX - rect.left) * scaleX;
+      const my = (e.clientY - rect.top) * scaleY;
+      for (let i = 0; i < 3; i++) {
+        const x = 160 + i * 170;
+        const y = 290;
+        const w = 140, h = 60;
+        if (mx > x - w/2 && mx < x + w/2 && my > y - h/2 && my < y + h/2) {
+          currentLevel = i;
+          resetGame();
+          updateLevelDisplay();
+          if (musicEnabled) startMusic();
+          return;
+        }
+      }
+    });
+
+    canvas.addEventListener('mousemove', (e) => {
+      if (state !== 'TITLE') return;
+      const rect = canvas.getBoundingClientRect();
+      const scaleX = canvas.width / rect.width;
+      const scaleY = canvas.height / rect.height;
+      const mx = (e.clientX - rect.left) * scaleX;
+      const my = (e.clientY - rect.top) * scaleY;
+      hoveredLevel = -1;
+      for (let i = 0; i < 3; i++) {
+        const x = 160 + i * 170;
+        const y = 290;
+        const w = 140, h = 60;
+        if (mx > x - w/2 && mx < x + w/2 && my > y - h/2 && my < y + h/2) {
+          hoveredLevel = i;
+          break;
+        }
+      }
+    });
+    canvas.addEventListener('mouseleave', () => { hoveredLevel = -1; });
+
+    // ========== SETTINGS UI ==========
+    const settingsPanel = document.getElementById('settingsPanel');
+    const settingsToggle = document.getElementById('settingsToggle');
+    settingsToggle.addEventListener('click', () => {
+      settingsPanel.classList.toggle('open');
+    });
+
+    // keybind badges
+    const keyBadges = document.querySelectorAll('.key-badge');
+    keyBadges.forEach(badge => {
+      badge.addEventListener('click', function() {
+        const action = this.dataset.key;
+        this.textContent = '?';
+        this.classList.add('active');
+        const handler = (e) => {
+          e.preventDefault();
+          const key = e.key.toLowerCase();
+          // only allow letter keys and arrows (map arrows to names)
+          let mappedKey = key;
+          if (key === 'arrowup') mappedKey = 'w';
+          else if (key === 'arrowdown') mappedKey = 's';
+          else if (key === 'arrowleft') mappedKey = 'a';
+          else if (key === 'arrowright') mappedKey = 'd';
+          else if (key.length !== 1 || !key.match(/[a-z]/)) {
+            // ignore non-letter
+            this.textContent = keybinds[action].toUpperCase();
+            this.classList.remove('active');
+            document.removeEventListener('keydown', handler);
+            return;
+          }
+          // update keybind
+          keybinds[action] = mappedKey;
+          this.textContent = mappedKey.toUpperCase();
+          this.classList.remove('active');
+          document.removeEventListener('keydown', handler);
+        };
+        document.addEventListener('keydown', handler);
+        // remove after a timeout if no key pressed
+        setTimeout(() => {
+          if (this.classList.contains('active')) {
+            this.textContent = keybinds[action].toUpperCase();
+            this.classList.remove('active');
+            document.removeEventListener('keydown', handler);
+          }
+        }, 3000);
+      });
+    });
+
+    // music toggle
+    const musicToggle = document.getElementById('musicToggle');
+    musicToggle.addEventListener('click', () => {
+      musicEnabled = !musicEnabled;
+      musicToggle.textContent = musicEnabled ? '▶ ON' : '⏸ OFF';
+      musicToggle.className = 'music-toggle ' + (musicEnabled ? 'on' : 'off');
+      if (musicEnabled && state === 'PLAYING') {
+        startMusic();
+      } else {
+        stopMusic();
+      }
+    });
+
+    // restart button
+    document.getElementById('restartButton').addEventListener('click', () => {
+      if (state === 'TITLE') return;
+      resetGame();
+      if (musicEnabled) startMusic();
+      updateLevelDisplay();
+    });
+
+    // ---- start ----
+    goToTitle();
+    updateLevelDisplay();
+    // init key badges
+    keyBadges.forEach(b => {
+      b.textContent = keybinds[b.dataset.key].toUpperCase();
+    });
+    gameLoop();
+  })();
+</script>
+</body>
+</html>

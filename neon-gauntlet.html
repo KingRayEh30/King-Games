@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>NEON GAUNTLET · FINAL</title>
+</head>
+<body>
+<div id="gameWrapper">
+    <canvas id="gameCanvas" width="800" height="500"></canvas>
+    <div id="uiOverlay">
+        <div id="hud">
+            <span class="score">🏆 <span id="scoreDisplay">0</span></span>
+            <span class="level">🎚️ LVL <span id="levelDisplay">1</span></span>
+            <span class="gauntlet" id="gauntletDisplay">🧤 GAUNTLET: 0</span>
+            <span class="best">⭐ <span id="bestDisplay">0</span></span>
+            <span class="speed" id="speedDisplay">⚡ 1.0x</span>
+        </div>
+        <div id="comboDisplay">🔥 COMBO x<span id="comboCount">0</span></div>
+        <div id="superchargeLabel">⚡ SUPERCHARGE</div>
+        <div id="superchargeBar"><div id="superchargeFill"></div></div>
+        <div id="superchargeActive">⚡ SUPERCHARGE ACTIVE</div>
+        <div id="gauntletNotify">
+            🧤 NEON GAUNTLET ACQUIRED
+            <span class="sub">Press <kbd style="background:#1a1a2e;color:#ff6bff;padding:2px 12px;border-radius:4px;border:1px solid #ff6bff;">N</kbd> to skip 2 levels!</span>
+        </div>
+        <div id="startScreen">
+            <div class="logo">NEON GAUNTLET</div>
+            <div class="tagline">Dodge • Survive • Dominate</div>
+            <button class="btn" id="startBtn">▶ PLAY</button>
+            <div class="controls-hint">
+                <kbd>SPACE</kbd> or <kbd>↑</kbd> or <kbd>Click</kbd> to Jump<br>
+                <kbd>S</kbd> Supercharge &nbsp; <kbd>N</kbd> Gauntlet (skip 2 levels)
+            </div>
+        </div>
+        <div id="gameOver">
+            <div class="title">💀 GAME OVER</div>
+            <div class="subtitle">YOU FELL TO THE NEON</div>
+            <div class="finalScore" id="finalScore">0</div>
+            <div class="finalBest">⭐ Best: <span id="finalBest">0</span></div>
+            <div class="stats">
+                <span>Distance <span class="number" id="statDistance">0m</span></span>
+                <span>Combo <span class="number" id="statCombo">0</span></span>
+                <span>Level <span class="number" id="statLevel">1</span></span>
+            </div>
+            <button class="btn" id="restartBtn">🔄 RETRY</button>
+            <button class="btn btn-secondary" id="menuBtn">🏠 MENU</button>
+        </div>
+    </div>
+</div>
+</body>
+</html>
