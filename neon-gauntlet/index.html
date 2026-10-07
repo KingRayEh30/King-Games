@@ -3,283 +3,8 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-    <title>NEON GAUNTLET</title>
-    <!-- <link rel="stylesheet" href="styles.css"> -->
-     <style>
-        * { margin:0; padding:0; box-sizing:border-box; }
-        body {
-            background: #0a0a1a;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
-            font-family: 'Segoe UI', system-ui, sans-serif;
-            overflow: hidden;
-            touch-action: none;
-            user-select: none;
-            -webkit-user-select: none;
-        }
-        #gameWrapper {
-            position: relative;
-            border: 2px solid #00f0ff;
-            border-radius: 12px;
-            box-shadow: 0 0 40px rgba(0,240,255,0.2), inset 0 0 40px rgba(0,240,255,0.05);
-            background: #0a0a1a;
-        }
-        #gameCanvas {
-            display: block;
-            width: 100%;
-            height: auto;
-            border-radius: 10px;
-            background: #0a0a1a;
-            cursor: pointer;
-            touch-action: none;
-        }
-        #uiOverlay {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            pointer-events: none;
-            border-radius: 10px;
-            overflow: hidden;
-        }
-        #hud {
-            position: absolute;
-            top: 20px;
-            left: 0;
-            width: 100%;
-            padding: 0 25px;
-            display: flex;
-            justify-content: space-between;
-            pointer-events: none;
-            z-index: 10;
-            font-weight: 700;
-            text-shadow: 0 0 20px rgba(0,240,255,0.3);
-        }
-        #hud .score { color: #00f0ff; font-size: 22px; letter-spacing: 1px; }
-        #hud .best { color: #ffd700; font-size: 18px; opacity:0.8; }
-        #hud .level { color: #aaffaa; font-size: 16px; opacity:0.9; }
-        #hud .gauntlet { color: #ff6bff; font-size: 16px; opacity:0.9; cursor: pointer; pointer-events: auto; }
-        #hud .gauntlet:hover { opacity:1; text-shadow:0 0 20px #ff6bff; }
-        #hud .gauntlet.ready { color: #ff6bff; animation: gauntletGlow 0.8s ease-in-out infinite alternate; }
-        @keyframes gauntletGlow { 0% { text-shadow: 0 0 10px #ff6bff; } 100% { text-shadow: 0 0 40px #ff6bff, 0 0 80px #ff6bff55; } }
-        #hud .speed { color: #ff006e; font-size: 14px; font-weight:600; opacity:0.7; position:absolute; bottom:-30px; left:50%; transform:translateX(-50%); }
-        #comboDisplay {
-            position: absolute;
-            top: 70px;
-            left: 50%;
-            transform: translateX(-50%);
-            color: #ffd700;
-            font-size: 28px;
-            font-weight: 900;
-            opacity: 0;
-            transition: opacity 0.15s;
-            text-shadow: 0 0 30px rgba(255,215,0,0.5);
-            pointer-events: none;
-            z-index: 10;
-        }
-        #comboDisplay.active { opacity:1; animation: comboPop 0.3s ease-out; }
-        @keyframes comboPop {
-            0% { transform: translateX(-50%) scale(0.5); opacity:0; }
-            60% { transform: translateX(-50%) scale(1.3); opacity:1; }
-            100% { transform: translateX(-50%) scale(1); opacity:1; }
-        }
-        #superchargeBar {
-            position: absolute;
-            bottom: 30px;
-            left: 50%;
-            transform: translateX(-50%);
-            width: 200px;
-            height: 14px;
-            background: rgba(255,255,255,0.1);
-            border-radius: 20px;
-            border: 1px solid rgba(255,215,0,0.3);
-            overflow: hidden;
-            pointer-events: none;
-            z-index: 10;
-            box-shadow: 0 0 20px rgba(255,215,0,0.1);
-        }
-        #superchargeFill {
-            width: 0%;
-            height: 100%;
-            background: linear-gradient(90deg, #ffd700, #ff6b00);
-            border-radius: 20px;
-            transition: width 0.1s ease;
-            box-shadow: 0 0 20px #ffd70055;
-        }
-        #superchargeLabel {
-            position: absolute;
-            bottom: 48px;
-            left: 50%;
-            transform: translateX(-50%);
-            color: #ffd700;
-            font-size: 11px;
-            letter-spacing: 2px;
-            opacity: 0.6;
-            pointer-events: none;
-            z-index: 10;
-            font-weight: 600;
-            text-shadow: 0 0 10px rgba(255,215,0,0.2);
-        }
-        #superchargeActive {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            color: #ffd700;
-            font-size: 48px;
-            font-weight: 900;
-            text-shadow: 0 0 60px rgba(255,215,0,0.6);
-            pointer-events: none;
-            z-index: 10;
-            opacity: 0;
-            transition: opacity 0.3s;
-        }
-        #superchargeActive.show { opacity: 1; animation: pulseGlow 0.5s ease-in-out infinite alternate; }
-        @keyframes pulseGlow { 0% { text-shadow: 0 0 30px rgba(255,215,0,0.4); } 100% { text-shadow: 0 0 80px rgba(255,215,0,0.9); } }
-        #gauntletNotify {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            color: #ff6bff;
-            font-size: 52px;
-            font-weight: 900;
-            text-shadow: 0 0 60px rgba(255,107,255,0.8), 0 0 120px rgba(255,107,255,0.4);
-            pointer-events: none;
-            z-index: 20;
-            opacity: 0;
-            transition: opacity 0.3s;
-            text-align: center;
-            letter-spacing: 3px;
-            background: rgba(10,10,26,0.7);
-            padding: 30px 50px;
-            border-radius: 20px;
-            border: 2px solid #ff6bff;
-            box-shadow: 0 0 80px rgba(255,107,255,0.3);
-        }
-        #gauntletNotify.show { opacity: 1; animation: gauntletAcquire 0.8s ease-out; }
-        @keyframes gauntletAcquire {
-            0% { transform: translate(-50%, -50%) scale(0.3) rotate(-10deg); opacity:0; }
-            50% { transform: translate(-50%, -50%) scale(1.1) rotate(2deg); opacity:1; }
-            70% { transform: translate(-50%, -50%) scale(0.95) rotate(-1deg); }
-            100% { transform: translate(-50%, -50%) scale(1) rotate(0deg); opacity:1; }
-        }
-        #gauntletNotify .sub {
-            font-size: 18px;
-            color: #ffd700;
-            letter-spacing: 4px;
-            opacity: 0.8;
-            display: block;
-            margin-top: 8px;
-            font-weight: 600;
-        }
-        #gameOver {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(10,10,26,0.92);
-            backdrop-filter: blur(8px);
-            display: none;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            pointer-events: auto;
-            z-index: 100;
-            border-radius: 10px;
-            padding: 20px;
-        }
-        #gameOver.show { display: flex; animation: fadeIn 0.4s ease-out; }
-        @keyframes fadeIn { 0% { opacity:0; transform:scale(0.95); } 100% { opacity:1; transform:scale(1); } }
-        #gameOver .title { color:#ff006e; font-size:48px; font-weight:900; text-shadow:0 0 60px rgba(255,0,110,0.4); margin-bottom:8px; letter-spacing:2px; }
-        #gameOver .subtitle { color:#666; font-size:16px; margin-bottom:25px; letter-spacing:4px; }
-        #gameOver .finalScore { color:#00f0ff; font-size:36px; font-weight:700; margin-bottom:5px; }
-        #gameOver .finalBest { color:#ffd700; font-size:20px; opacity:0.8; margin-bottom:30px; }
-        #gameOver .stats { color:#888; font-size:14px; margin-bottom:25px; display:flex; gap:30px; }
-        #gameOver .stats span { text-align:center; }
-        #gameOver .stats .number { display:block; color:#fff; font-size:22px; font-weight:700; }
-        .btn {
-            background: linear-gradient(135deg, #00f0ff, #0099ff);
-            color: #0a0a1a;
-            border: none;
-            padding: 16px 50px;
-            font-size: 20px;
-            font-weight: 800;
-            border-radius: 50px;
-            cursor: pointer;
-            pointer-events: auto;
-            transition: all 0.2s;
-            text-transform: uppercase;
-            letter-spacing: 2px;
-            box-shadow: 0 0 30px rgba(0,240,255,0.3);
-            touch-action: manipulation;
-        }
-        .btn:hover { transform:scale(1.05); box-shadow:0 0 50px rgba(0,240,255,0.5); }
-        .btn:active { transform:scale(0.95); }
-        .btn-secondary {
-            background: transparent;
-            color: #fff;
-            border: 2px solid #444;
-            box-shadow: none;
-            padding: 12px 30px;
-            font-size: 14px;
-            margin-top: 12px;
-        }
-        .btn-secondary:hover { border-color:#00f0ff; box-shadow:0 0 30px rgba(0,240,255,0.1); }
-        #startScreen {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            pointer-events: auto;
-            z-index: 50;
-            border-radius: 10px;
-            background: rgba(10,10,26,0.7);
-            backdrop-filter: blur(4px);
-        }
-        #startScreen .logo { font-size:52px; font-weight:900; background:linear-gradient(135deg,#00f0ff,#9d00ff,#ff006e); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; letter-spacing:3px; margin-bottom:5px; }
-        #startScreen .tagline { color:#666; font-size:14px; letter-spacing:6px; margin-bottom:30px; text-transform:uppercase; }
-        #startScreen .controls-hint { color:#444; font-size:13px; margin-top:20px; letter-spacing:1px; }
-        #startScreen .controls-hint kbd { background:#1a1a2e; color:#00f0ff; padding:4px 12px; border-radius:4px; border:1px solid #333; font-size:12px; margin:0 3px; }
-        @media (max-width:600px) {
-            #gameWrapper { border-width:1px; border-radius:8px; width:100vw; max-width:100vw; }
-            #gameCanvas { border-radius:7px; }
-            #hud .score { font-size:16px; }
-            #hud .best { font-size:14px; }
-            #hud .level { font-size:13px; }
-            #hud .gauntlet { font-size:13px; }
-            #gameOver .title { font-size:32px; }
-            #gameOver .finalScore { font-size:28px; }
-            .btn { padding:14px 35px; font-size:16px; }
-            #startScreen .logo { font-size:36px; }
-            #startScreen .tagline { font-size:11px; letter-spacing:4px; }
-            #comboDisplay { font-size:22px; top:60px; }
-            #superchargeBar { width: 150px; height: 12px; bottom: 20px; }
-            #superchargeLabel { font-size: 10px; bottom: 38px; }
-            #superchargeActive { font-size: 32px; }
-            #gauntletNotify { font-size: 28px; padding: 20px 25px; }
-            #gauntletNotify .sub { font-size: 14px; }
-        }
-        @media (max-width:400px) {
-            #hud { padding:0 15px; top:12px; }
-            #hud .score { font-size:14px; }
-            #hud .best { font-size:12px; }
-            #hud .gauntlet { font-size:11px; }
-            #gameOver .title { font-size:26px; }
-            .btn { padding:12px 28px; font-size:14px; }
-            #gauntletNotify { font-size: 22px; padding: 15px 20px; }
-        }
-        ::-webkit-scrollbar { display:none; }
-     </style>
+    <title>NEON GAUNTLET · gentle start</title>
+    <link rel="stylesheet" href="styles.css">
 </head>
 <body>
 <div id="gameWrapper">
@@ -324,13 +49,13 @@
         </div>
     </div>
 </div>
-<!-- <script src="game.js"></script> -->
  <script>
     // ============================================================
-    //  NEON GAUNTLET · NO SUPERCHARGE TIMER
+    //  NEON GAUNTLET · GENTLE START EDITION
+    //  - Slower initial game speed (3.0 instead of 4.5)
+    //  - Wider initial obstacle spacing (110 frames)
+    //  - Gentler gravity + capped fall speed
     //  - Supercharge fills +6 per obstacle jumped
-    //  - Press S to activate 5-second shield (no timer visible)
-    //  - Combo resets on death
     // ============================================================
 
     const canvas = document.getElementById('gameCanvas');
@@ -372,35 +97,37 @@
     window.addEventListener('resize', resizeCanvas);
     resizeCanvas();
 
-    // ===== CONSTANTS =====
-    const GRAVITY = 0.7;
-    const JUMP_FORCE = -11;
+    // ===== CONSTANTS — GENTLE START =====
+    const GRAVITY = 0.38;
+    const MAX_FALL_SPEED = 7.5;
+    const JUMP_FORCE = -9.2;
     const MAX_JUMPS = 2;
     const GROUND_Y = 420;
     const PLAYER_SIZE = 20;
-    const SUPERCHARGE_DURATION = 300; // 5 seconds at 60fps
+    const SUPERCHARGE_DURATION = 300;
     const SUPERCHARGE_MAX = 100;
     const SUPERCHARGE_GAIN = 6;
     const GAUNTLET_INTERVAL = 5;
 
+    // ---- LEVELS: first level is MUCH easier ----
     const LEVELS = [
-        { threshold: 0,    speed: 4.5,  spawnBase: 80,  label: '1' },
-        { threshold: 200,  speed: 5.5,  spawnBase: 70,  label: '2' },
-        { threshold: 450,  speed: 6.5,  spawnBase: 60,  label: '3' },
-        { threshold: 750,  speed: 7.5,  spawnBase: 50,  label: '4' },
-        { threshold: 1100, speed: 8.5,  spawnBase: 42,  label: '5' },
-        { threshold: 1500, speed: 9.5,  spawnBase: 36,  label: '6' },
-        { threshold: 2000, speed: 10.5, spawnBase: 30,  label: '7' },
-        { threshold: 2600, speed: 11.5, spawnBase: 26,  label: '8' },
-        { threshold: 3300, speed: 12.5, spawnBase: 22,  label: '9' },
-        { threshold: 4100, speed: 14.0, spawnBase: 18,  label: '10' },
+        { threshold: 0,    speed: 3.0,  spawnBase: 110, label: '1' },   // <-- slower & wider spacing
+        { threshold: 250,  speed: 4.2,  spawnBase: 90,  label: '2' },
+        { threshold: 550,  speed: 5.4,  spawnBase: 75,  label: '3' },
+        { threshold: 900,  speed: 6.6,  spawnBase: 62,  label: '4' },
+        { threshold: 1300, speed: 7.8,  spawnBase: 52,  label: '5' },
+        { threshold: 1800, speed: 9.0,  spawnBase: 44,  label: '6' },
+        { threshold: 2400, speed: 10.2, spawnBase: 36,  label: '7' },
+        { threshold: 3100, speed: 11.4, spawnBase: 30,  label: '8' },
+        { threshold: 3900, speed: 12.6, spawnBase: 25,  label: '9' },
+        { threshold: 4800, speed: 14.0, spawnBase: 20,  label: '10' },
     ];
 
     // ===== GAME STATE =====
     let gameState = 'menu';
     let score = 0;
     let bestScore = parseInt(localStorage.getItem('neonGauntletBest')) || 0;
-    let gameSpeed = 4.5;
+    let gameSpeed = 3.0;          // start slower
     let speedMultiplier = 1.0;
     let combo = 0;
     let maxCombo = 0;
@@ -409,7 +136,7 @@
     let currentLevel = 0;
     let levelUpFlag = false;
     let levelUpTimer = 0;
-    let spawnInterval = 80;
+    let spawnInterval = 110;      // wider initial spacing
     let spawnTimer = 0;
     let difficultyTimer = 0;
 
@@ -481,16 +208,22 @@
         }
     }
     function getRandomObstacleType() {
+        // For the very first few obstacles, only use simple spikes to ease the player in
+        if (distance < 80) return 'spike';
         const types = ['spike','spike','spike','block','moving_block'];
-        if (distance > 200) types.push('double_spike','spike_ceiling');
-        if (distance > 400) types.push('gap');
+        if (distance > 250) types.push('double_spike','spike_ceiling');
+        if (distance > 500) types.push('gap');
         return types[Math.floor(Math.random()*types.length)];
     }
     function spawnObstacle() {
         const type = getRandomObstacleType();
         const obs = createObstacle(type);
         const lastObs = obstacles[obstacles.length-1];
-        if (lastObs && lastObs.x > 700) obs.x = lastObs.x + 120 + Math.random()*80;
+        // Wider spacing early on
+        if (lastObs && lastObs.x > 700) {
+            const extraGap = distance < 300 ? 150 + Math.random()*100 : 120 + Math.random()*80;
+            obs.x = lastObs.x + extraGap;
+        }
         obstacles.push(obs);
     }
 
@@ -519,7 +252,7 @@
             const lvl = LEVELS[currentLevel];
             gameSpeed = lvl.speed;
             spawnInterval = lvl.spawnBase;
-            speedMultiplier = gameSpeed / 4.5;
+            speedMultiplier = gameSpeed / 3.0;  // baseline is now 3.0
             levelDisplay.textContent = lvl.label;
             levelUpFlag = true;
             levelUpTimer = 30;
@@ -613,7 +346,8 @@
     // ===== GAME FUNCTIONS =====
     function resetGame() {
         player.x=150; player.y=GROUND_Y-PLAYER_SIZE; player.vy=0; player.grounded=false; player.jumpsRemaining=MAX_JUMPS; player.trail=[];
-        obstacles=[]; particles=[]; score=0; combo=0; maxCombo=0; distance=0; gameSpeed=4.5; speedMultiplier=1.0; spawnTimer=0; spawnInterval=80; difficultyTimer=0; frameCount=0; currentLevel=0; levelUpFlag=false; levelUpTimer=0;
+        obstacles=[]; particles=[]; score=0; combo=0; maxCombo=0; distance=0; 
+        gameSpeed=3.0; speedMultiplier=1.0; spawnTimer=0; spawnInterval=110; difficultyTimer=0; frameCount=0; currentLevel=0; levelUpFlag=false; levelUpTimer=0;
         supercharge = 0;
         superchargeActiveFlag = false;
         superchargeTimer = 0;
@@ -636,7 +370,6 @@
     function gameOverHandler() {
         gameState='over'; stopMusic();
         if (score > bestScore) { bestScore=score; localStorage.setItem('neonGauntletBest', String(bestScore)); }
-        // RESET COMBO ON DEATH
         combo = 0;
         comboCount.textContent = '0';
         document.getElementById('comboDisplay').classList.remove('active');
@@ -711,7 +444,6 @@
                 score += points;
                 combo++;
                 if (combo > maxCombo) maxCombo = combo;
-                // GAIN SUPERCHARGE when jumping over an obstacle
                 gainSupercharge(SUPERCHARGE_GAIN);
                 if (combo > 0 && combo % 5 === 0) {
                     playComboSound();
@@ -726,7 +458,7 @@
         }
     }
 
-    // ===== UPDATE =====
+    // ===== UPDATE — with capped fall speed =====
     function update() {
         if (gameState !== 'playing') return;
         frameCount++;
@@ -746,8 +478,11 @@
             if (score >= LEVELS[next].threshold) updateLevel();
         }
 
+        // --- apply gravity, but clamp fall speed ---
         player.vy += GRAVITY;
+        if (player.vy > MAX_FALL_SPEED) player.vy = MAX_FALL_SPEED;
         player.y += player.vy;
+
         if (player.y + player.h >= GROUND_Y) {
             player.y = GROUND_Y - player.h; player.vy = 0;
             if (!player.grounded) { player.grounded=true; player.jumpsRemaining=MAX_JUMPS; spawnParticles(player.x+player.w/2, GROUND_Y, 8, '#00f0ff44',2,15); }
@@ -763,8 +498,8 @@
         if (spawnTimer >= spawnInterval) {
             spawnTimer = 0;
             spawnObstacle();
-            if (Math.random() < 0.3 && distance > 150) spawnObstacle();
-            if (Math.random() < 0.15 && distance > 350) spawnObstacle();
+            if (Math.random() < 0.3 && distance > 300) spawnObstacle();
+            if (Math.random() < 0.15 && distance > 600) spawnObstacle();
         }
 
         for (const obs of obstacles) {
@@ -919,7 +654,7 @@
     gauntletDisplay.addEventListener('click', (e) => {
         e.stopPropagation();
         if (gameState === 'playing') useGauntlet();
-    });6266
+    });
 
     startBtn.addEventListener('click', (e) => { e.stopPropagation(); startGame(); });
     restartBtn.addEventListener('click', (e) => { e.stopPropagation(); startGame(); });
@@ -931,7 +666,7 @@
 
     // ===== INIT =====
     resetGame(); bestDisplay.textContent = bestScore; gameLoop();
-    console.log('🚀 NEON GAUNTLET · No supercharge timer, combo resets on death.');
+    console.log('🚀 NEON GAUNTLET · Gentle start: initial speed 3.0, wider spacing 110f');
  </script>
 </body>
 </html>

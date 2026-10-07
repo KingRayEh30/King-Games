@@ -4,136 +4,13 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>⚙️ RETRO DODGE · WASD + settings</title>
-  <style>
-    * {
-      box-sizing: border-box;
-      user-select: none;
-    }
-    body {
-      margin: 0;
-      min-height: 100vh;
-      background: #0b0e1a;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      font-family: 'Courier New', Courier, monospace;
-    }
-    .game-wrapper {
-      background: #1a1f2f;
-      padding: 24px 24px 30px;
-      border-radius: 32px;
-      box-shadow: 0 12px 0 #0f121e, 0 20px 30px rgba(0,0,0,0.7);
-      border: 2px solid #3d4a5f;
-      max-width: 740px;
-    }
-    canvas {
-      display: block;
-      margin: 0 auto;
-      width: 640px;
-      height: 480px;
-      image-rendering: crisp-edges;
-      image-rendering: pixelated;
-      background: #1c2538;
-      border-radius: 16px;
-      box-shadow: inset 0 0 0 2px #2c384f, 0 8px 0 #0c101b;
-      cursor: pointer;
-    }
-    .info-panel {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin: 16px 8px 0 8px;
-      color: #b7d0e5;
-      text-shadow: 0 2px 0 #0a0e16;
-      font-size: 18px;
-      font-weight: bold;
-      flex-wrap: wrap;
-      gap: 8px;
-    }
-    .score-box {
-      background: #0f1422;
-      padding: 4px 16px;
-      border-radius: 40px;
-      border: 2px solid #3a4b64;
-      color: #d7ecff;
-    }
-    .btn {
-      background: #2b3850;
-      border: none;
-      color: #d7ecff;
-      font-family: 'Courier New', monospace;
-      font-weight: bold;
-      font-size: 16px;
-      padding: 4px 14px;
-      border-radius: 40px;
-      border-bottom: 4px solid #141c2b;
-      cursor: pointer;
-      transition: 0.08s linear;
-      box-shadow: 0 3px 0 #0e131f;
-    }
-    .btn:active { transform: translateY(4px); border-bottom-width: 2px; }
-    .btn:hover { background: #33445f; color: white; }
-    .settings-toggle {
-      background: #2a3f5a;
-      border-color: #4a6a8a;
-    }
-    .settings-panel {
-      background: #141d2b;
-      border-radius: 20px;
-      padding: 16px 20px;
-      margin-top: 14px;
-      border: 2px solid #2c3f5a;
-      display: none;
-      flex-wrap: wrap;
-      justify-content: center;
-      gap: 18px 28px;
-    }
-    .settings-panel.open { display: flex; }
-    .setting-group {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      color: #b7d0e5;
-      font-size: 16px;
-    }
-    .setting-group label { display: flex; align-items: center; gap: 6px; }
-    .key-badge {
-      background: #0b101c;
-      padding: 2px 12px;
-      border-radius: 30px;
-      border: 2px solid #3d5a7a;
-      font-weight: bold;
-      color: #d7ecff;
-      min-width: 40px;
-      text-align: center;
-      cursor: pointer;
-    }
-    .key-badge.active { border-color: #f5b042; background: #1f2a3f; }
-    .key-badge:hover { background: #1f2a3f; }
-    .music-toggle {
-      background: #1f2a3f;
-      border: 2px solid #4a6a8a;
-      border-radius: 40px;
-      padding: 4px 16px;
-      color: #b7d0e5;
-      font-size: 18px;
-      cursor: pointer;
-    }
-    .music-toggle.on { border-color: #7bcb7b; color: #7bcb7b; }
-    .music-toggle.off { border-color: #8a5a5a; color: #b08080; }
-    @media (max-width: 700px) {
-      canvas { width: 100%; height: auto; aspect-ratio: 640/480; }
-      .game-wrapper { padding: 16px; }
-      .info-panel { justify-content: center; }
-      .settings-panel { flex-direction: column; align-items: center; }
-    }
-  </style>
+  <link rel="stylesheet" href="2d-retro-game-styles.css">
 </head>
 <body>
 <div class="game-wrapper">
   <canvas id="gameCanvas" width="640" height="480"></canvas>
   <div class="info-panel">
-    <div class="score-box">🏆 <span id="scoreDisplay">0000</span></div>
+    <div class="score-box"><span id="scoreDisplay">0000</span></div>
     <div class="level-indicator" id="levelDisplay">🌱 EASY</div>
     <button class="btn settings-toggle" id="settingsToggle">⚙️ SETTINGS</button>
     <button class="btn" id="restartButton">↺ RESTART</button>
@@ -166,7 +43,11 @@
 
 <script>
   (function() {
-    // ----- RETRO DODGE · WASD + KEYBINDS + MUSIC -----
+    // ----- RETRO DODGE -----
+    // + 15-SECOND WAVES: player glides to center, blocks glide into square around player
+    // + 3-2-1 SURVIVE! COUNTDOWN after glide (blocks stay FROZEN until timer ends)
+    // + Blocks only move during the active play window
+    // + SPEED RAMP: a little faster every wave
     const canvas = document.getElementById('gameCanvas');
     const ctx = canvas.getContext('2d');
     const scoreSpan = document.getElementById('scoreDisplay');
@@ -175,28 +56,34 @@
     const W = 640, H = 480;
 
     // ---- game state ----
-    let state = 'TITLE';        // 'TITLE', 'PLAYING', 'GAMEOVER'
-    let currentLevel = 0;       // 0=easy, 1=medium, 2=hard
+    let state = 'TITLE';
+    let currentLevel = 0;
     let player = { x: 300, y: 380, w: 24, h: 24 };
     let enemies = [];
     let score = 0;
     let frame = 0;
     let spawnCounter = 0;
 
-    // ---- keybinds (default WASD) ----
-    let keybinds = {
-      up: 'w',
-      down: 's',
-      left: 'a',
-      right: 'd'
-    };
-    // ---- active keys (for movement) ----
-    let keys = {
-      up: false,
-      down: false,
-      left: false,
-      right: false
-    };
+    // ---- wave / timing ----
+    let gameTime = 0;
+    let waveCount = 0;
+    // phase: 'idle' (active play), 'glide' (moving into formation), 'countdown' (3-2-1-SURVIVE!)
+    let wavePhase = 'idle';
+    let waveGlideT = 0;
+    let countdownT = 0;
+    const WAVE_INTERVAL = 15;
+    const WAVE_GLIDE_TIME = 1.2;
+    const COUNTDOWN_STEP = 0.85;
+    const COUNTDOWN_TOTAL = COUNTDOWN_STEP * 4;
+
+    // stored start positions for smooth glide interpolation
+    let playerGlideStart = { x: 0, y: 0 };
+    let enemyGlideStart = [];
+    let enemyGlideTarget = [];
+
+    // ---- keybinds ----
+    let keybinds = { up: 'w', down: 's', left: 'a', right: 'd' };
+    let keys = { up: false, down: false, left: false, right: false };
 
     // ---- music ----
     let musicEnabled = true;
@@ -206,13 +93,23 @@
 
     // ---- level configs ----
     const LEVELS = [
-      { name: '🌱 EASY',    enemySpeed: 1.3,  maxEnemies: 12, spawnRate: 45, playerSpeed: 5.4, scoreMult: 0.8 },
-      { name: '🌿 MEDIUM',  enemySpeed: 2.0,  maxEnemies: 20, spawnRate: 28, playerSpeed: 5.0, scoreMult: 1.2 },
-      { name: '🔥 HARD',    enemySpeed: 2.9,  maxEnemies: 30, spawnRate: 16, playerSpeed: 4.6, scoreMult: 1.8 }
+      { name: '🌱 EASY',        enemySpeed: 1.3, maxEnemies: 12, spawnRate: 45, playerSpeed: 5.4, scoreMult: 0.8,
+        speedStep: 0.08, squareHalfSize: 200, minSpeedFloor: 1.3 },
+      { name: '🌿 MEDIUM',      enemySpeed: 2.0, maxEnemies: 20, spawnRate: 28, playerSpeed: 5.0, scoreMult: 1.2,
+        speedStep: 0.10, squareHalfSize: 220, minSpeedFloor: 2.0 },
+      { name: '🔥 HARD',        enemySpeed: 2.9, maxEnemies: 30, spawnRate: 16, playerSpeed: 4.6, scoreMult: 1.8,
+        speedStep: 0.13, squareHalfSize: 240, minSpeedFloor: 2.9 },
+      { name: '🌪️ INSANE',      enemySpeed: 3.6, maxEnemies: 38, spawnRate: 11, playerSpeed: 4.3, scoreMult: 2.4,
+        speedStep: 0.16, squareHalfSize: 260, minSpeedFloor: 3.6 },
+      { name: '💀 NIGHTMARE',   enemySpeed: 4.3, maxEnemies: 46, spawnRate: 8,  playerSpeed: 4.0, scoreMult: 3.2,
+        speedStep: 0.20, squareHalfSize: 280, minSpeedFloor: 4.3 },
+      { name: '☠️ IMPOSSIBLE',  enemySpeed: 5.2, maxEnemies: 55, spawnRate: 6,  playerSpeed: 3.8, scoreMult: 4.5,
+        speedStep: 0.25, squareHalfSize: 300, minSpeedFloor: 5.2 }
     ];
 
-    // ---- helpers ----
     function clamp(v, min, max) { return Math.min(max, Math.max(min, v)); }
+    function lerp(a, b, t) { return a + (b - a) * t; }
+    function easeInOut(t) { return t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2; }
 
     // ---- reset game ----
     function resetGame() {
@@ -222,6 +119,11 @@
       score = 0;
       frame = 0;
       spawnCounter = 0;
+      gameTime = 0;
+      waveCount = 0;
+      wavePhase = 'idle';
+      waveGlideT = 0;
+      countdownT = 0;
       state = 'PLAYING';
       updateScoreDisplay();
       updateLevelDisplay();
@@ -231,6 +133,11 @@
       state = 'TITLE';
       enemies = [];
       score = 0;
+      gameTime = 0;
+      waveCount = 0;
+      wavePhase = 'idle';
+      waveGlideT = 0;
+      countdownT = 0;
       updateScoreDisplay();
       stopMusic();
     }
@@ -242,10 +149,22 @@
       scoreSpan.textContent = str;
     }
     function updateLevelDisplay() {
-      levelSpan.textContent = LEVELS[currentLevel].name;
+      const cfg = LEVELS[currentLevel];
+      const mins = Math.floor(gameTime / WAVE_INTERVAL);
+      const secs = Math.floor(gameTime % WAVE_INTERVAL);
+      const timeStr = String(mins).padStart(2, '0') + ':' + String(secs).padStart(2, '0');
+      levelSpan.textContent = cfg.name + ' · ' + timeStr;
     }
 
-    // ---- spawn enemy ----
+    // ---- effective enemy speed (ramps a little every wave) ----
+    function getEnemySpeed() {
+      const cfg = LEVELS[currentLevel];
+      const mult = 1 + waveCount * cfg.speedStep;
+      const speed = cfg.enemySpeed * mult;
+      return Math.max(speed, cfg.minSpeedFloor);
+    }
+
+    // ---- spawn a single enemy from a random edge ----
     function spawnEnemy() {
       const cfg = LEVELS[currentLevel];
       if (enemies.length >= cfg.maxEnemies) return;
@@ -257,7 +176,7 @@
       else if (side === 2) { x = Math.random() * (W - 60) + 30; y = H + pad + 20; }
       else { x = -pad - 20; y = Math.random() * (H - 60) + 30; }
       const size = Math.floor(Math.random() * 12) + 14;
-      const speed = cfg.enemySpeed + (Math.random() * 0.8 - 0.4);
+      const speed = getEnemySpeed() + (Math.random() * 0.8 - 0.4);
       const colors = ['#f05454','#f5a742','#f7d44a','#7bcb7b','#4fadf0','#b77cf2','#f28bc9','#6fc1b0','#f59b8c','#9cd4f0'];
       const color = colors[Math.floor(Math.random() * colors.length)];
       enemies.push({
@@ -267,10 +186,176 @@
       });
     }
 
+    // ---- start of a new wave: set up glide targets ----
+    function startWaveGlide() {
+      const playerTargetX = W/2 - player.w/2;
+      const playerTargetY = H/2 - player.h/2;
+      playerGlideStart = { x: player.x, y: player.y };
+      player._glideTargetX = playerTargetX;
+      player._glideTargetY = playerTargetY;
+
+      const cfg = LEVELS[currentLevel];
+      const half = cfg.squareHalfSize;
+      const px = W/2;
+      const py = H/2;
+      const count = Math.max(1, enemies.length);
+      const perimeter = 8 * half;
+      const step = perimeter / count;
+
+      enemyGlideStart = enemies.map(e => ({ x: e.x, y: e.y }));
+      enemyGlideTarget = [];
+
+      for (let i = enemies.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [enemies[i], enemies[j]] = [enemies[j], enemies[i]];
+        [enemyGlideStart[i], enemyGlideStart[j]] = [enemyGlideStart[j], enemyGlideStart[i]];
+      }
+
+      enemies.forEach((e, i) => {
+        let d = (i * step + Math.random() * step * 0.6) % perimeter;
+        let x, y;
+        if (d < 2 * half) {
+          x = px - half + d;
+          y = py - half;
+        } else if (d < 4 * half) {
+          x = px + half;
+          y = py - half + (d - 2 * half);
+        } else if (d < 6 * half) {
+          x = px + half - (d - 4 * half);
+          y = py + half;
+        } else {
+          x = px - half;
+          y = py + half - (d - 6 * half);
+        }
+        x += (Math.random() - 0.5) * 14;
+        y += (Math.random() - 0.5) * 14;
+        enemyGlideTarget.push({ x: x - e.w/2, y: y - e.h/2 });
+
+        e.speed = getEnemySpeed() + (Math.random() * 0.6 - 0.2);
+      });
+
+      wavePhase = 'glide';
+      waveGlideT = 0;
+
+      if (audioCtx && audioCtx.state === 'running') {
+        try {
+          const osc = audioCtx.createOscillator();
+          const gain = audioCtx.createGain();
+          osc.type = 'square';
+          osc.frequency.value = 660;
+          gain.gain.value = 0.07;
+          gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.25);
+          osc.connect(gain);
+          gain.connect(audioCtx.destination);
+          osc.start();
+          osc.stop(audioCtx.currentTime + 0.25);
+        } catch(e) {}
+      }
+    }
+
+    // ---- advance the glide animation ----
+    function updateWaveGlide(dt) {
+      waveGlideT += dt;
+      const t = clamp(waveGlideT / WAVE_GLIDE_TIME, 0, 1);
+      const e = easeInOut(t);
+
+      player.x = lerp(playerGlideStart.x, player._glideTargetX, e);
+      player.y = lerp(playerGlideStart.y, player._glideTargetY, e);
+
+      for (let i = 0; i < enemies.length; i++) {
+        const start = enemyGlideStart[i];
+        const target = enemyGlideTarget[i];
+        if (!start || !target) continue;
+        enemies[i].x = lerp(start.x, target.x, e);
+        enemies[i].y = lerp(start.y, target.y, e);
+      }
+
+      if (t >= 1) {
+        wavePhase = 'countdown';
+        countdownT = 0;
+      }
+    }
+
+    // ---- advance the countdown ----
+    function updateCountdown(dt) {
+      countdownT += dt;
+      if (countdownT >= COUNTDOWN_TOTAL) {
+        wavePhase = 'idle';
+        countdownT = 0;
+      }
+    }
+
+    // ---- ANTI-CLUSTER ----
+    function breakUpClusters() {
+      if (frame % 20 !== 0) return;
+      if (enemies.length < 4) return;
+
+      const clumpRadius = 55;
+      const minNeighbors = 3;
+      const launchStrength = 6.5;
+      const launchSpread = 0.35;
+
+      const clumpedIndices = new Set();
+
+      for (let i = 0; i < enemies.length; i++) {
+        const e1 = enemies[i];
+        let neighbors = 0;
+        for (let j = 0; j < enemies.length; j++) {
+          if (i === j) continue;
+          const e2 = enemies[j];
+          const dx = (e2.x + e2.w/2) - (e1.x + e1.w/2);
+          const dy = (e2.y + e2.h/2) - (e1.y + e1.h/2);
+          const dist = Math.hypot(dx, dy);
+          if (dist < clumpRadius && dist > 0.01) neighbors++;
+        }
+        if (neighbors >= minNeighbors) clumpedIndices.add(i);
+      }
+
+      if (clumpedIndices.size === 0) return;
+
+      const px = player.x + player.w / 2;
+      const py = player.y + player.h / 2;
+
+      clumpedIndices.forEach(i => {
+        const e = enemies[i];
+        const ex = e.x + e.w / 2;
+        const ey = e.y + e.h / 2;
+
+        let dx = ex - px;
+        let dy = ey - py;
+        let dist = Math.hypot(dx, dy);
+
+        if (dist < 0.001) {
+          const angle = Math.random() * Math.PI * 2;
+          dx = Math.cos(angle);
+          dy = Math.sin(angle);
+          dist = 1;
+        }
+
+        const baseAngle = Math.atan2(dy, dx);
+        const angle = baseAngle + (Math.random() - 0.5) * launchSpread * Math.PI * 2;
+
+        e.x += Math.cos(angle) * launchStrength;
+        e.y += Math.sin(angle) * launchStrength;
+
+        e.x += (Math.random() - 0.5) * 2;
+        e.y += (Math.random() - 0.5) * 2;
+      });
+
+      for (let e of enemies) {
+        e.x = clamp(e.x, -120, W + 120);
+        e.y = clamp(e.y, -120, H + 120);
+      }
+    }
+
     // ---- update enemies ----
+    // Blocks ONLY move when wavePhase === 'idle' (i.e. after the 3-2-1-SURVIVE! timer).
     function updateEnemies() {
+      if (wavePhase !== 'idle') return; // frozen during glide and countdown
+
       const targetX = player.x + player.w/2;
       const targetY = player.y + player.h/2;
+
       for (let e of enemies) {
         let dx = targetX - (e.x + e.w/2);
         let dy = targetY - (e.y + e.h/2);
@@ -283,6 +368,9 @@
         e.x += stepX;
         e.y += stepY;
       }
+
+      breakUpClusters();
+
       const px = player.x, py = player.y, pw = player.w, ph = player.h;
       for (let e of enemies) {
         if (px < e.x + e.w && px + pw > e.x &&
@@ -292,6 +380,7 @@
           return;
         }
       }
+
       enemies = enemies.filter(e => {
         const margin = 180;
         return e.x > -margin && e.x < W + margin &&
@@ -299,9 +388,10 @@
       });
     }
 
-    // ---- player movement (uses keybinds) ----
+    // ---- player movement ----
     function movePlayer() {
       if (state !== 'PLAYING') return;
+      if (wavePhase !== 'idle') return; // frozen during glide and countdown
       const SPEED = LEVELS[currentLevel].playerSpeed;
       let dx = 0, dy = 0;
       if (keys.up) dy -= SPEED;
@@ -314,7 +404,7 @@
     }
 
     function updateScore() {
-      if (state === 'PLAYING') {
+      if (state === 'PLAYING' && wavePhase === 'idle') {
         const cfg = LEVELS[currentLevel];
         const bonus = Math.min(enemies.length, 10) * 0.04;
         score += (0.10 + bonus) * cfg.scoreMult;
@@ -324,6 +414,7 @@
 
     function handleSpawning() {
       if (state !== 'PLAYING') return;
+      if (wavePhase !== 'idle') return; // pause spawning during glide/countdown
       const cfg = LEVELS[currentLevel];
       spawnCounter++;
       if (spawnCounter >= cfg.spawnRate) {
@@ -333,7 +424,34 @@
       }
     }
 
-    // ========== MUSIC SYSTEM (8-bit style) ==========
+    // ---- time: fire a new wave every 15s ----
+    // IMPORTANT: gameTime only advances during active play ('idle'), so the
+    // next wave timer is based on total played time, not including glide/countdown.
+    function updateDifficulty(dt) {
+      if (state !== 'PLAYING') return;
+
+      if (wavePhase === 'glide') {
+        updateWaveGlide(dt);
+        return;
+      }
+      if (wavePhase === 'countdown') {
+        updateCountdown(dt);
+        return;
+      }
+
+      // idle → advance game time and check for next wave
+      gameTime += dt;
+      updateLevelDisplay();
+
+      const waveNow = Math.floor(gameTime / WAVE_INTERVAL);
+      while (waveCount < waveNow) {
+        waveCount++;
+        startWaveGlide();
+        break;
+      }
+    }
+
+    // ========== MUSIC ==========
     function startMusic() {
       if (!musicEnabled) return;
       stopMusic();
@@ -342,7 +460,7 @@
         if (audioCtx.state === 'suspended') audioCtx.resume();
         playNote();
         musicInterval = setInterval(playNote, 320);
-      } catch(e) { /* silent fail */ }
+      } catch(e) {}
     }
 
     function stopMusic() {
@@ -372,6 +490,21 @@
     // ========== DRAWING ==========
     let hoveredLevel = -1;
 
+    function getLevelButtons() {
+      const buttons = [];
+      const w = 140, h = 56;
+      const colX = [160, 320, 480];
+      const rowY = [250, 330];
+      let idx = 0;
+      for (let r = 0; r < 2; r++) {
+        for (let c = 0; c < 3; c++) {
+          buttons.push({ x: colX[c], y: rowY[r], w, h, index: idx });
+          idx++;
+        }
+      }
+      return buttons;
+    }
+
     function drawTitle() {
       ctx.fillStyle = '#0f1a2b';
       ctx.fillRect(0, 0, W, H);
@@ -384,43 +517,41 @@
       ctx.textBaseline = 'middle';
       ctx.shadowBlur = 30;
       ctx.shadowColor = '#4f7fa0';
-      ctx.font = 'bold 64px "Courier New", monospace';
+      ctx.font = 'bold 56px "Courier New", monospace';
       ctx.fillStyle = '#b7e4ff';
-      ctx.fillText('RETRO DODGE', W/2, 130);
+      ctx.fillText('RETRO DODGE', W/2, 90);
       ctx.shadowBlur = 0;
       ctx.fillStyle = '#7fc5ff';
-      ctx.fillText('RETRO DODGE', W/2-2, 128);
+      ctx.fillText('RETRO DODGE', W/2-2, 88);
 
-      ctx.font = 'bold 28px "Courier New", monospace';
+      ctx.font = 'bold 22px "Courier New", monospace';
       ctx.fillStyle = '#c0daff';
-      ctx.fillText('SELECT LEVEL', W/2, 220);
+      ctx.fillText('SELECT LEVEL', W/2, 170);
 
-      const levelNames = ['🌱 EASY', '🌿 MEDIUM', '🔥 HARD'];
-      const colors = ['#7bcb7b', '#f7d44a', '#f05454'];
-      for (let i = 0; i < 3; i++) {
-        const x = 160 + i * 170;
-        const y = 290;
-        const w = 140, h = 60;
+      const colors = ['#7bcb7b','#f7d44a','#f05454','#b77cf2','#f28bc9','#4fadf0'];
+      const buttons = getLevelButtons();
+      buttons.forEach(btn => {
+        const i = btn.index;
         const isHover = (hoveredLevel === i);
         ctx.shadowBlur = isHover ? 20 : 0;
         ctx.shadowColor = colors[i];
         ctx.fillStyle = isHover ? '#2f4a6a' : '#1a253a';
-        ctx.fillRect(x - w/2, y - h/2, w, h);
-        ctx.strokeStyle = isHover ? '#b7d0e5' : '#4a6080';
+        ctx.fillRect(btn.x - btn.w/2, btn.y - btn.h/2, btn.w, btn.h);
+        ctx.strokeStyle = isHover ? '#ffffff' : '#4a6080';
         ctx.lineWidth = 3;
-        ctx.strokeRect(x - w/2, y - h/2, w, h);
+        ctx.strokeRect(btn.x - btn.w/2, btn.y - btn.h/2, btn.w, btn.h);
         ctx.shadowBlur = 0;
-        ctx.font = 'bold 26px "Courier New", monospace';
+        ctx.font = 'bold 18px "Courier New", monospace';
         ctx.fillStyle = isHover ? '#ffffff' : colors[i];
-        ctx.fillText(levelNames[i], x, y + 4);
-      }
-      ctx.font = '18px "Courier New", monospace';
+        ctx.fillText(LEVELS[i].name, btn.x, btn.y + 4);
+      });
+
+      ctx.font = '16px "Courier New", monospace';
       ctx.fillStyle = '#6e83a0';
       ctx.fillText('click a level to start', W/2, 400);
-      // show controls
-      ctx.font = '14px "Courier New", monospace';
+      ctx.font = '13px "Courier New", monospace';
       ctx.fillStyle = '#4a6080';
-      ctx.fillText('WASD / custom keys · music toggle in settings', W/2, 450);
+      ctx.fillText('every 15s a new wave: player to center, blocks glide into a square', W/2, 435);
     }
 
     function drawGame() {
@@ -480,7 +611,7 @@
       ctx.fillRect(p.x+p.w-9, p.y+p.h-5, 5, 5);
       ctx.shadowBlur = 0;
 
-      ctx.font = 'bold 24px "Courier New", monospace';
+      ctx.font = 'bold 22px "Courier New", monospace';
       ctx.textAlign = 'right';
       ctx.textBaseline = 'top';
       ctx.fillStyle = '#b7d0e5';
@@ -489,23 +620,101 @@
       ctx.fillText('SCORE ' + String(Math.floor(score)).padStart(4, '0'), W-18, 14);
       ctx.shadowBlur = 0;
 
+      // HUD
+      const waveTime = gameTime % WAVE_INTERVAL;
+      const nextWave = Math.max(0, WAVE_INTERVAL - waveTime);
+      ctx.font = 'bold 16px "Courier New", monospace';
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'top';
+      ctx.fillStyle = '#f5b042';
+      ctx.shadowBlur = 8;
+      ctx.shadowColor = '#f5b042';
+      ctx.fillText('WAVE ' + waveCount, 14, 14);
+      ctx.fillStyle = '#7bcb7b';
+      ctx.shadowColor = '#7bcb7b';
+      if (wavePhase === 'glide') {
+        ctx.fillText('▢ GLIDING...', 14, 36);
+      } else if (wavePhase === 'countdown') {
+        ctx.fillText('▢ GET READY', 14, 36);
+      } else {
+        ctx.fillText('▢ next wave: ' + nextWave.toFixed(1) + 's', 14, 36);
+      }
+      ctx.shadowBlur = 0;
+
       ctx.font = '14px "Courier New", monospace';
       ctx.textAlign = 'left';
       ctx.textBaseline = 'bottom';
       ctx.fillStyle = '#6e83a060';
       ctx.fillText(LEVELS[currentLevel].name + '  |  enemies: ' + enemies.length, 14, H-10);
 
+      // ===== Big centered countdown: 3, 2, 1, SURVIVE! =====
+      if (wavePhase === 'countdown') {
+        const idx = Math.floor(countdownT / COUNTDOWN_STEP);
+        let text, color;
+        if (idx === 0) { text = '3'; color = '#7bcb7b'; }
+        else if (idx === 1) { text = '2'; color = '#f7d44a'; }
+        else if (idx === 2) { text = '1'; color = '#f5a742'; }
+        else { text = 'SURVIVE!'; color = '#ff2a6d'; }
+
+        const local = (countdownT % COUNTDOWN_STEP) / COUNTDOWN_STEP;
+        const scale = idx === 3
+          ? (0.6 + 0.4 * (1 - local))
+          : (0.7 + 0.5 * (1 - local));
+
+        ctx.save();
+        ctx.translate(W/2, H/2 - 20);
+        ctx.scale(scale, scale);
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.shadowBlur = 30;
+        ctx.shadowColor = color;
+        ctx.fillStyle = color;
+        ctx.font = idx === 3
+          ? 'bold 76px "Courier New", monospace'
+          : 'bold 120px "Courier New", monospace';
+        ctx.fillText(text, 0, 0);
+        ctx.shadowBlur = 0;
+        ctx.lineWidth = 3;
+        ctx.strokeStyle = '#00000060';
+        ctx.strokeText(text, 0, 0);
+        ctx.restore();
+      }
+
       if (state === 'GAMEOVER') {
+        ctx.fillStyle = '#0a0e16c0';
+        ctx.fillRect(0, 0, W, H);
+
         ctx.font = 'bold 52px "Courier New", monospace';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
         ctx.shadowBlur = 20;
         ctx.shadowColor = '#ff0066';
         ctx.fillStyle = '#ff2a6d';
-        ctx.fillText('GAME OVER', W/2, 170);
+        ctx.fillText('GAME OVER', W/2, 90);
         ctx.shadowBlur = 0;
         ctx.fillStyle = '#ffa0c0';
-        ctx.fillText('GAME OVER', W/2-2, 168);
+        ctx.fillText('GAME OVER', W/2-2, 88);
+
+        const colors = ['#7bcb7b','#f7d44a','#f05454','#b77cf2','#f28bc9','#4fadf0'];
+        const buttons = getLevelButtons();
+        buttons.forEach(btn => {
+          const i = btn.index;
+          const isHover = (hoveredLevel === i);
+          ctx.shadowBlur = isHover ? 20 : 0;
+          ctx.shadowColor = colors[i];
+          ctx.fillStyle = isHover ? '#2f4a6a' : '#1a253a';
+          ctx.fillRect(btn.x - btn.w/2, btn.y - btn.h/2, btn.w, btn.h);
+          ctx.strokeStyle = isHover ? '#ffffff' : '#4a6080';
+          ctx.lineWidth = 3;
+          ctx.strokeRect(btn.x - btn.w/2, btn.y - btn.h/2, btn.w, btn.h);
+          ctx.shadowBlur = 0;
+          ctx.font = 'bold 18px "Courier New", monospace';
+          ctx.fillStyle = isHover ? '#ffffff' : colors[i];
+          ctx.fillText(LEVELS[i].name, btn.x, btn.y + 4);
+        });
+        ctx.font = '16px "Courier New", monospace';
+        ctx.fillStyle = '#b7d0e5';
+        ctx.fillText('choose a level to restart', W/2, 440);
       }
     }
 
@@ -515,27 +724,30 @@
     }
 
     // ---- game loop ----
-    function gameLoop() {
+    let lastTime = performance.now();
+    function gameLoop(now) {
+      const dt = Math.min(0.05, (now - lastTime) / 1000);
+      lastTime = now;
+
       if (state === 'PLAYING') {
         movePlayer();
         handleSpawning();
         updateEnemies();
         updateScore();
+        updateDifficulty(dt);
         frame++;
       }
       draw();
       requestAnimationFrame(gameLoop);
     }
 
-    // ========== KEYBOARD (uses keybinds) ==========
+    // ========== KEYBOARD ==========
     function handleKeyDown(e) {
       const key = e.key.toLowerCase();
-      // map key to action
       for (let action of ['up', 'down', 'left', 'right']) {
         if (key === keybinds[action]) {
           keys[action] = true;
           e.preventDefault();
-          // if title and music off, start music on first keypress
           if (state === 'TITLE') return;
         }
       }
@@ -564,20 +776,29 @@
       if (e.key.startsWith('Arrow')) e.preventDefault();
     }, { passive: false });
 
-    // ========== MOUSE / TITLE ==========
+    // ========== MOUSE ==========
+    function hitTestLevel(mx, my) {
+      const buttons = getLevelButtons();
+      for (const btn of buttons) {
+        if (mx > btn.x - btn.w/2 && mx < btn.x + btn.w/2 &&
+            my > btn.y - btn.h/2 && my < btn.y + btn.h/2) {
+          return btn.index;
+        }
+      }
+      return -1;
+    }
+
     canvas.addEventListener('click', (e) => {
-      if (state !== 'TITLE') return;
       const rect = canvas.getBoundingClientRect();
       const scaleX = canvas.width / rect.width;
       const scaleY = canvas.height / rect.height;
       const mx = (e.clientX - rect.left) * scaleX;
       const my = (e.clientY - rect.top) * scaleY;
-      for (let i = 0; i < 3; i++) {
-        const x = 160 + i * 170;
-        const y = 290;
-        const w = 140, h = 60;
-        if (mx > x - w/2 && mx < x + w/2 && my > y - h/2 && my < y + h/2) {
-          currentLevel = i;
+
+      if (state === 'TITLE' || state === 'GAMEOVER') {
+        const idx = hitTestLevel(mx, my);
+        if (idx >= 0) {
+          currentLevel = idx;
           resetGame();
           updateLevelDisplay();
           if (musicEnabled) startMusic();
@@ -587,33 +808,28 @@
     });
 
     canvas.addEventListener('mousemove', (e) => {
-      if (state !== 'TITLE') return;
       const rect = canvas.getBoundingClientRect();
       const scaleX = canvas.width / rect.width;
       const scaleY = canvas.height / rect.height;
       const mx = (e.clientX - rect.left) * scaleX;
       const my = (e.clientY - rect.top) * scaleY;
-      hoveredLevel = -1;
-      for (let i = 0; i < 3; i++) {
-        const x = 160 + i * 170;
-        const y = 290;
-        const w = 140, h = 60;
-        if (mx > x - w/2 && mx < x + w/2 && my > y - h/2 && my < y + h/2) {
-          hoveredLevel = i;
-          break;
-        }
+
+      if (state === 'TITLE' || state === 'GAMEOVER') {
+        hoveredLevel = hitTestLevel(mx, my);
+        return;
       }
+      hoveredLevel = -1;
     });
+
     canvas.addEventListener('mouseleave', () => { hoveredLevel = -1; });
 
-    // ========== SETTINGS UI ==========
+    // ========== SETTINGS ==========
     const settingsPanel = document.getElementById('settingsPanel');
     const settingsToggle = document.getElementById('settingsToggle');
     settingsToggle.addEventListener('click', () => {
       settingsPanel.classList.toggle('open');
     });
 
-    // keybind badges
     const keyBadges = document.querySelectorAll('.key-badge');
     keyBadges.forEach(badge => {
       badge.addEventListener('click', function() {
@@ -623,27 +839,23 @@
         const handler = (e) => {
           e.preventDefault();
           const key = e.key.toLowerCase();
-          // only allow letter keys and arrows (map arrows to names)
           let mappedKey = key;
           if (key === 'arrowup') mappedKey = 'w';
           else if (key === 'arrowdown') mappedKey = 's';
           else if (key === 'arrowleft') mappedKey = 'a';
           else if (key === 'arrowright') mappedKey = 'd';
           else if (key.length !== 1 || !key.match(/[a-z]/)) {
-            // ignore non-letter
             this.textContent = keybinds[action].toUpperCase();
             this.classList.remove('active');
             document.removeEventListener('keydown', handler);
             return;
           }
-          // update keybind
           keybinds[action] = mappedKey;
           this.textContent = mappedKey.toUpperCase();
           this.classList.remove('active');
           document.removeEventListener('keydown', handler);
         };
         document.addEventListener('keydown', handler);
-        // remove after a timeout if no key pressed
         setTimeout(() => {
           if (this.classList.contains('active')) {
             this.textContent = keybinds[action].toUpperCase();
@@ -654,7 +866,6 @@
       });
     });
 
-    // music toggle
     const musicToggle = document.getElementById('musicToggle');
     musicToggle.addEventListener('click', () => {
       musicEnabled = !musicEnabled;
@@ -667,7 +878,6 @@
       }
     });
 
-    // restart button
     document.getElementById('restartButton').addEventListener('click', () => {
       if (state === 'TITLE') return;
       resetGame();
@@ -678,11 +888,10 @@
     // ---- start ----
     goToTitle();
     updateLevelDisplay();
-    // init key badges
     keyBadges.forEach(b => {
       b.textContent = keybinds[b.dataset.key].toUpperCase();
     });
-    gameLoop();
+    requestAnimationFrame(gameLoop);
   })();
 </script>
 </body>
